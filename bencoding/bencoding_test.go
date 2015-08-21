@@ -49,49 +49,48 @@ func TestDecodeString(t *testing.T) {
 }
 
 type InputResultErr struct {
-	input  interface{}
-	result interface{}
+	input    interface{}
+	result   interface{}
 	hasError bool
-	err    error
+	err      error
+}
 
+func CheckCases(cases map[string]InputResultErr) {
+	for description, test := range cases {
+		Convey(fmt.Sprintf("%s", description), func() {
+			input := test.input.(string)
+			result, err := DecodeInteger(input)
+			So(result, ShouldEqual, test.result)
+			if test.hasError && test.err != nil {
+				So(err, ShouldEqual, test.err)
+			} else if test.hasError && test.err == nil {
+				So(err, ShouldNotBeNil)
+			} else {
+				So(err, ShouldBeNil)
+			}
+		})
+	}
 }
 
 func TestDecodeInteger(t *testing.T) {
+
 	Convey("Given a valid input", t, func() {
 		cases := map[string]InputResultErr{
-			"'i3e' returns 3": InputResultErr{"i3e", 3, false, nil},
-			"'i-1e' returns -1": InputResultErr{"i-1e", -1, false, nil},
+			"'i3e' returns 3":     InputResultErr{"i3e", 3, false, nil},
+			"'i-1e' returns -1":   InputResultErr{"i-1e", -1, false, nil},
 			"'i100e' returns 100": InputResultErr{"i100e", 100, false, nil},
-			"'i0e' returns 0": InputResultErr{"i0e", 0, false, nil},
+			"'i0e' returns 0":     InputResultErr{"i0e", 0, false, nil},
 		}
-		for description, test := range cases {
-			Convey(fmt.Sprintf("%s", description), func() {
-				input := test.input.(string)
-				result, err := DecodeInteger(input)
-				So(result, ShouldEqual, test.result)
-				So(err, ShouldEqual, test.err)
-			})
-		}
+		CheckCases(cases)
 	})
 
 	Convey("Given an invalid input", t, func() {
 		cases := map[string]InputResultErr{
 			"'i04e'": InputResultErr{"i04e", 0, true, ErrDecodeIntegerNoPadding},
-			"'iae'": InputResultErr{"iae", 0, true, nil},
-			"'e9a": InputResultErr{"e9a", 0, true, ErrDecodeIntegerBadFormat},
+			"'iae'":  InputResultErr{"iae", 0, true, nil},
+			"'e9a":   InputResultErr{"e9a", 0, true, ErrDecodeIntegerBadFormat},
 		}
-		for description, test := range cases {
-			Convey(fmt.Sprintf("%s", description), func() {
-				input := test.input.(string)
-				result, err := DecodeInteger(input)
-				So(result, ShouldEqual, test.result)
-				if test.hasError && test.err != nil {
-				So(err, ShouldEqual, test.err)
-				} else {
-					So(err, ShouldNotBeNil)
-				}
-			})
-		}
+		CheckCases(cases)
 	})
 
 }
