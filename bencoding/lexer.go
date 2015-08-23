@@ -2,10 +2,11 @@ package bencoding
 
 import (
 	"fmt"
+	"github.com/oleiade/lane"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
-	"strconv"
 )
 
 type Lexer struct {
@@ -14,10 +15,11 @@ type Lexer struct {
 	Tokens chan Token
 	State  LexFn
 
-	Start int
-	Pos   int
-	Width int
+	Start        int
+	Pos          int
+	Width        int
 	StringLength int
+	NestedStack  *lane.Stack
 }
 
 func (lex *Lexer) String() string {
@@ -52,7 +54,6 @@ Increment the position
 */
 func (lex *Lexer) Inc() {
 	lex.Pos++
-	fmt.Println(lex)
 	if lex.Pos >= utf8.RuneCountInString(lex.Input) {
 		lex.Emit(TOKEN_EOF)
 	}
@@ -70,6 +71,7 @@ Puts a token on the token channel. The value of this
 token  is read from the input based on the current lexer position.
 */
 func (lex *Lexer) Emit(tokenType TokenType) {
+//	fmt.Println("Emitting", TokenNames[tokenType])
 	lex.Tokens <- Token{Type: tokenType, Value: lex.Input[lex.Start:lex.Pos]}
 	lex.Start = lex.Pos
 }
@@ -201,6 +203,7 @@ func BeginLexing(name, input string, state LexFn) *Lexer {
 		Input:  input,
 		State:  state,
 		Tokens: make(chan Token, 3),
+		NestedStack: lane.NewStack(),
 	}
 
 	return l
@@ -211,11 +214,30 @@ STATES
 */
 
 func LexBegin(lex *Lexer) LexFn {
-	lex.SkipWhitespace()
-	if strings.HasPrefix(lex.InputToEnd(), DICT_START) {
-		return LexDictStart
-	} else {
-		lex.Inc()
+	//	lex.SkipWhitespace()
+	//	if strings.HasPrefix(lex.InputToEnd(), DICT_START) {
+	//		return LexDictStart
+	//	} else {
+	//		lex.Inc()
+	//		return lex.Errorf("done")
+	//	}
+
+	//	lex.NestedStack = append(lex.NestedStack, LexListEnd)
+	next := lex.Peek()
+	switch {
+	case next == 'i':
+		return LexIntegerStart
+	case unicode.IsDigit(next):
+		return LexStringStart
+	case next == 'l':
+		return LexListStart
+	default:
+		if closeState := lex.NestedStack.Pop(); closeState != nil {
+			return closeState.(func (*Lexer) LexFn)
+		}
+		if lex.IsEOF() {
+			lex.Emit(TOKEN_EOF)
+		}
 		return lex.Errorf("done")
 	}
 
@@ -246,7 +268,7 @@ func LexStringValue(lex *Lexer) LexFn {
 	lex.Pos++
 	lex.Emit(TOKEN_COLON)
 
-	for i := 0; i<lex.StringLength; i++ {
+	for i := 0; i < lex.StringLength; i++ {
 		if lex.IsEOF() {
 			return lex.Errorf("Unexpected EOF")
 		}
@@ -266,12 +288,12 @@ func LexIntegerStart(lex *Lexer) LexFn {
 
 func LexIntegerValue(lex *Lexer) LexFn {
 	for {
+		lex.Inc()
+
 		if strings.HasPrefix(lex.InputToEnd(), INTEGER_END) {
 			lex.Emit(TOKEN_INTEGER_VALUE)
 			return LexIntegerEnd
 		}
-
-		lex.Inc()
 
 		if lex.IsEOF() {
 			return lex.Errorf("Unexpected EOF")
@@ -298,15 +320,8 @@ func LexListStart(lex *Lexer) LexFn {
 }
 
 func LexListValue(lex *Lexer) LexFn {
-	next := lex.Peek()
-	switch {
-	case next == 'i':
-		return LexIntegerStart
-	case unicode.IsDigit(next):
-		return LexStringStart
-	default:
-		return nil
-	}
+	lex.NestedStack.Push(LexListEnd)
+	return LexBegin
 }
 
 func LexListEnd(lex *Lexer) LexFn {
