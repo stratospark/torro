@@ -50,7 +50,19 @@ func TestStringLexing(t *testing.T) {
 		}},
 	}
 
-	invalidTests := []LexTest{}
+	invalidTests := []LexTest{
+		LexTest{"-1:a", LexBegin, []Token{
+			Token{TOKEN_ERROR, LexErrInvalidCharacter},
+		}},
+		LexTest{"1.4:aa", LexBegin, []Token{
+			Token{TOKEN_ERROR, LexErrInvalidStringLength},
+		}},
+		LexTest{"5:asdf", LexBegin, []Token{
+			Token{TOKEN_STRING_LENGTH, "5"},
+			tColon,
+			Token{TOKEN_ERROR, LexErrUnexpectedEOF},
+		}},
+	}
 
 	checkTests := func(tests []LexTest) {
 		for _, test := range tests {
@@ -101,11 +113,15 @@ func TestIntegerLexing(t *testing.T) {
 	}
 
 	invalidTests := []LexTest{
-		LexTest{"i04e", LexBegin, []Token{
+		LexTest{"iae", LexBegin, []Token{
 			tIntegerStart,
-			Token{TOKEN_INTEGER_VALUE, "04"},
+			Token{TOKEN_INTEGER_VALUE, "a"},
 			tIntegerEnd,
 			tEOF,
+		}},
+		LexTest{"i10", LexBegin, []Token{
+			tIntegerStart,
+			Token{TOKEN_ERROR, LexErrUnexpectedEOF},
 		}},
 	}
 
@@ -188,7 +204,18 @@ func TestListLexing(t *testing.T) {
 		}},
 	}
 
-	invalidTests := []LexTest{}
+	invalidTests := []LexTest{
+		LexTest{"l", LexBegin, []Token{
+			tListStart,
+			Token{TOKEN_ERROR, LexErrUnclosedDelimeter},
+		}},
+		LexTest{"lle", LexBegin, []Token{
+			tListStart,
+			tListStart,
+			tListEnd,
+			Token{TOKEN_ERROR, LexErrUnclosedDelimeter},
+		}},
+	}
 
 	checkTests := func(tests []LexTest) {
 		for _, test := range tests {

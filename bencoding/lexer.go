@@ -22,6 +22,13 @@ type Lexer struct {
 	NestedStack  *lane.Stack
 }
 
+var (
+	LexErrInvalidStringLength string = "Invalid String Length"
+	LexErrInvalidCharacter    string = "Invalid Character"
+	LexErrUnclosedDelimeter          = "Unclosed Delimeter"
+	LexErrUnexpectedEOF              = "Unexpected EOF"
+)
+
 func (lex *Lexer) String() string {
 	return fmt.Sprintf("Name: %s, Input: %s, Start: %d, Pos: %d, Width: %d",
 		lex.Name,
@@ -233,14 +240,20 @@ func LexBegin(lex *Lexer) LexFn {
 	case next == 'd':
 		return LexDictStart
 	default:
+		if lex.IsEOF() {
+			if lex.NestedStack.Size() > 0 {
+				lex.Errorf(LexErrUnclosedDelimeter)
+			}
+			lex.Emit(TOKEN_EOF)
+		}
 		if lex.NestedStack.Size() > 0 {
 			if closeState := lex.NestedStack.Pop(); closeState != nil {
 				return closeState.(func(*Lexer) LexFn)
 			}
 		}
-		if lex.IsEOF() {
-			lex.Emit(TOKEN_EOF)
-		}
+
+		lex.Errorf(LexErrInvalidCharacter)
+
 		return lex.Errorf("done")
 	}
 
@@ -253,16 +266,12 @@ func LexStringStart(lex *Lexer) LexFn {
 
 		if strings.HasPrefix(lex.InputToEnd(), COLON) {
 			n, err := strconv.ParseInt(lex.CurrentInput(), 10, 64)
-			if err != nil {
-				return lex.Errorf("Invalid string length")
+			if err != nil || n < 0 {
+				return lex.Errorf(LexErrInvalidStringLength)
 			}
 			lex.StringLength = int(n)
 			lex.Emit(TOKEN_STRING_LENGTH)
 			return LexStringValue
-		}
-
-		if lex.IsEOF() {
-			return lex.Errorf("Unexpected EOF")
 		}
 	}
 }
@@ -273,7 +282,7 @@ func LexStringValue(lex *Lexer) LexFn {
 
 	for i := 0; i < lex.StringLength; i++ {
 		if lex.IsEOF() {
-			return lex.Errorf("Unexpected EOF")
+			return lex.Errorf(LexErrUnexpectedEOF)
 		}
 		lex.Pos++
 	}
@@ -291,7 +300,7 @@ func LexIntegerStart(lex *Lexer) LexFn {
 
 func LexIntegerValue(lex *Lexer) LexFn {
 	for {
-		lex.Inc()
+		lex.Pos++
 
 		if strings.HasPrefix(lex.InputToEnd(), INTEGER_END) {
 			lex.Emit(TOKEN_INTEGER_VALUE)
@@ -299,7 +308,7 @@ func LexIntegerValue(lex *Lexer) LexFn {
 		}
 
 		if lex.IsEOF() {
-			return lex.Errorf("Unexpected EOF")
+			return lex.Errorf(LexErrUnexpectedEOF)
 		}
 	}
 }
