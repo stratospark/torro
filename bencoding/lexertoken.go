@@ -1,4 +1,5 @@
 package bencoding
+import "fmt"
 
 type Token struct {
 	Type TokenType
@@ -51,6 +52,16 @@ var TokenNames = map[TokenType]string{
 	TOKEN_DICT_END:   "DICT_END",
 }
 
+func (t Token) String() string {
+	maxLen := 40
+	value := t.Value
+	if len(t.Value) > maxLen {
+		value = t.Value[:maxLen] + "..."
+	}
+	output := fmt.Sprintf("[%s: %q]", TokenNames[t.Type], value)
+	return output
+}
+
 const EOF rune = 0
 
 const (
@@ -62,34 +73,3 @@ const (
 	DICT_START string = "d"
 	DICT_END string = "e"
 )
-
-
-
-
-
-
-/*
-9:publisher
-d9:publisher3:bob17:publisher-webpage15:www.example.com18:publisher.location4:homee represents { "publisher" => "bob", "publisher-webpage" => "www.example.com", "publisher.location" => "home" }
-
-
-{
-	"publisher: "bob",
-	"publisher-webpage": "www.....",
-	"publisher.location": ["loc1", "loc2"]
-}
-
-[
-TOKEN_DICT_START,
-
-TOKEN_STRING_LENGTH,
-TOKEN_COLON,
-TOKEN_STRING_VALUE,
-
-TOKEN_STRING_LENGTH,
-TOKEN_COLON,
-TOKEN_STRING_VALUE,
-]
-
-
- */

@@ -12,17 +12,6 @@ type LexTest struct {
 	Result     []Token
 }
 
-func collect(lex *Lexer) (tokens []Token) {
-	for {
-		token := lex.NextToken()
-		tokens = append(tokens, token)
-		if token.Type == TOKEN_EOF || token.Type == TOKEN_ERROR {
-			break
-		}
-	}
-	return
-}
-
 var (
 	tColon        = Token{TOKEN_COLON, ":"}
 	tIntegerStart = Token{TOKEN_INTEGER_START, "i"}

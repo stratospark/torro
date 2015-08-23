@@ -39,6 +39,20 @@ func (lex *Lexer) String() string {
 	)
 }
 
+
+func collect(lex *Lexer) (tokens []Token) {
+	for {
+		token := lex.NextToken()
+		tokens = append(tokens, token)
+		if token.Type == TOKEN_EOF || token.Type == TOKEN_ERROR {
+			break
+		}
+	}
+	return
+}
+
+var Collect = collect
+
 type LexFn func(*Lexer) LexFn
 
 /*
@@ -162,9 +176,9 @@ Returns the next rune in the stream, then puts the lexer
 position back. Basically reads the next rune without consuming it.
 */
 func (lex *Lexer) Peek() rune {
-	rune := lex.Next()
+	r := lex.Next()
 	lex.Backup()
-	return rune
+	return r
 }
 
 /*
@@ -220,15 +234,6 @@ STATES
 */
 
 func LexBegin(lex *Lexer) LexFn {
-	//	lex.SkipWhitespace()
-	//	if strings.HasPrefix(lex.InputToEnd(), DICT_START) {
-	//		return LexDictStart
-	//	} else {
-	//		lex.Inc()
-	//		return lex.Errorf("done")
-	//	}
-
-	//	lex.NestedStack = append(lex.NestedStack, LexListEnd)
 	next := lex.Peek()
 	switch {
 	case next == 'i':
