@@ -63,7 +63,7 @@ func TestStringLexing(t *testing.T) {
 		LexTest{"0:", LexStringStart, []Token {
 			Token{TOKEN_STRING_LENGTH, "0"},
 			Token{TOKEN_COLON, ":"},
-			Token{TOKEN_STRING_VALUE: ""},
+			Token{TOKEN_STRING_VALUE, ""},
 			tEOF,
 		}},
 	}

@@ -6,7 +6,6 @@ import (
 	"unicode"
 	"unicode/utf8"
 	"strconv"
-	"cmd/internal/objfile"
 )
 
 type Lexer struct {
@@ -224,7 +223,6 @@ func LexBegin(lex *Lexer) LexFn {
 }
 
 func LexStringStart(lex *Lexer) LexFn {
-	fmt.Println("LexStringStart")
 	for {
 		lex.Inc()
 
@@ -245,14 +243,14 @@ func LexStringStart(lex *Lexer) LexFn {
 }
 
 func LexStringValue(lex *Lexer) LexFn {
-	lex.Inc()
+	lex.Pos++
 	lex.Emit(TOKEN_COLON)
 
 	for i := 0; i<lex.StringLength; i++ {
 		if lex.IsEOF() {
 			return lex.Errorf("Unexpected EOF")
 		}
-		lex.Inc()
+		lex.Pos++
 	}
 
 	lex.Emit(TOKEN_STRING_VALUE)
@@ -291,5 +289,28 @@ func LexDictStart(lex *Lexer) LexFn {
 	lex.Pos += len(DICT_START)
 	lex.Emit(TOKEN_INTEGER_START)
 	return LexBegin
+}
 
+func LexListStart(lex *Lexer) LexFn {
+	lex.Pos += len(LIST_START)
+	lex.Emit(TOKEN_LIST_START)
+	return LexListValue
+}
+
+func LexListValue(lex *Lexer) LexFn {
+	next := lex.Peek()
+	switch {
+	case next == 'i':
+		return LexIntegerStart
+	case unicode.IsDigit(next):
+		return LexStringStart
+	default:
+		return nil
+	}
+}
+
+func LexListEnd(lex *Lexer) LexFn {
+	lex.Pos += len(LIST_END)
+	lex.Emit(TOKEN_LIST_END)
+	return LexBegin
 }
