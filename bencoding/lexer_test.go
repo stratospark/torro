@@ -29,6 +29,8 @@ var (
 	tIntegerEnd   = Token{TOKEN_INTEGER_END, "e"}
 	tListStart    = Token{TOKEN_LIST_START, "l"}
 	tListEnd      = Token{TOKEN_LIST_END, "e"}
+	tDictStart    = Token{TOKEN_DICT_START, "d"}
+	tDictEnd      = Token{TOKEN_DICT_END, "e"}
 	tEOF          = Token{TOKEN_EOF, ""}
 )
 
@@ -175,13 +177,110 @@ func TestListLexing(t *testing.T) {
 			tListEnd,
 			tEOF,
 		}},
+		LexTest{"llleee", LexBegin, []Token{
+			tListStart,
+			tListStart,
+			tListStart,
+			tListEnd,
+			tListEnd,
+			tListEnd,
+			tEOF,
+		}},
 	}
 
 	invalidTests := []LexTest{}
 
 	checkTests := func(tests []LexTest) {
 		for _, test := range tests {
-//			fmt.Println(test.Input)
+			//			fmt.Println(test.Input)
+			Convey(fmt.Sprintf("%s", test.Input), func() {
+				lex := BeginLexing(".torrent", test.Input, test.StartState)
+				results := collect(lex)
+				So(results, ShouldResemble, test.Result)
+			})
+		}
+	}
+
+	Convey("Given valid inputs", t, func() {
+		checkTests(validTests)
+	})
+
+	Convey("Given invalid inputs", t, func() {
+		checkTests(invalidTests)
+	})
+
+}
+
+func TestDictLexing(t *testing.T) {
+	validTests := []LexTest{
+		LexTest{"d3:cow3:moo4:spam4:eggse", LexBegin, []Token{
+			tDictStart,
+			Token{TOKEN_STRING_LENGTH, "3"},
+			tColon,
+			Token{TOKEN_STRING_VALUE, "cow"},
+			Token{TOKEN_STRING_LENGTH, "3"},
+			tColon,
+			Token{TOKEN_STRING_VALUE, "moo"},
+			Token{TOKEN_STRING_LENGTH, "4"},
+			tColon,
+			Token{TOKEN_STRING_VALUE, "spam"},
+			Token{TOKEN_STRING_LENGTH, "4"},
+			tColon,
+			Token{TOKEN_STRING_VALUE, "eggs"},
+			tDictEnd,
+			tEOF,
+		}},
+		LexTest{"d4:spaml1:a1:bee", LexBegin, []Token{
+			tDictStart,
+			Token{TOKEN_STRING_LENGTH, "4"},
+			tColon,
+			Token{TOKEN_STRING_VALUE, "spam"},
+			tListStart,
+			Token{TOKEN_STRING_LENGTH, "1"},
+			tColon,
+			Token{TOKEN_STRING_VALUE, "a"},
+			Token{TOKEN_STRING_LENGTH, "1"},
+			tColon,
+			Token{TOKEN_STRING_VALUE, "b"},
+			tListEnd,
+			tDictEnd,
+			tEOF,
+		}},
+		LexTest{"d9:publisher3:bob17:publisher-webpage15:www.example.com18:publisher.location4:homee", LexBegin, []Token{
+			tDictStart,
+			Token{TOKEN_STRING_LENGTH, "9"},
+			tColon,
+			Token{TOKEN_STRING_VALUE, "publisher"},
+			Token{TOKEN_STRING_LENGTH, "3"},
+			tColon,
+			Token{TOKEN_STRING_VALUE, "bob"},
+			Token{TOKEN_STRING_LENGTH, "17"},
+			tColon,
+			Token{TOKEN_STRING_VALUE, "publisher-webpage"},
+			Token{TOKEN_STRING_LENGTH, "15"},
+			tColon,
+			Token{TOKEN_STRING_VALUE, "www.example.com"},
+			Token{TOKEN_STRING_LENGTH, "18"},
+			tColon,
+			Token{TOKEN_STRING_VALUE, "publisher.location"},
+			Token{TOKEN_STRING_LENGTH, "4"},
+			tColon,
+			Token{TOKEN_STRING_VALUE, "home"},
+			tDictEnd,
+			tEOF,
+		}},
+		LexTest{"de", LexBegin, []Token{
+			tDictStart,
+			tDictEnd,
+			tEOF,
+		}},
+	}
+
+	invalidTests := []LexTest{}
+
+	checkTests := func(tests []LexTest) {
+		for _, test := range tests {
+			//			fmt.Println(test.Input)
 			Convey(fmt.Sprintf("%s", test.Input), func() {
 				lex := BeginLexing(".torrent", test.Input, test.StartState)
 				results := collect(lex)

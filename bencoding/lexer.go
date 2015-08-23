@@ -230,6 +230,8 @@ func LexBegin(lex *Lexer) LexFn {
 		return LexStringStart
 	case next == 'l':
 		return LexListStart
+	case next == 'd':
+		return LexDictStart
 	default:
 		if lex.NestedStack.Size() > 0 {
 			if closeState := lex.NestedStack.Pop(); closeState != nil {
@@ -310,7 +312,18 @@ func LexIntegerEnd(lex *Lexer) LexFn {
 
 func LexDictStart(lex *Lexer) LexFn {
 	lex.Pos += len(DICT_START)
-	lex.Emit(TOKEN_INTEGER_START)
+	lex.Emit(TOKEN_DICT_START)
+	return LexDictValue
+}
+
+func LexDictValue(lex *Lexer) LexFn {
+	lex.NestedStack.Push(LexDictEnd)
+	return LexBegin
+}
+
+func LexDictEnd(lex *Lexer) LexFn {
+	lex.Pos += len(DICT_END)
+	lex.Emit(TOKEN_DICT_END)
 	return LexBegin
 }
 
