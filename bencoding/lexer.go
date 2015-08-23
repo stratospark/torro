@@ -71,7 +71,6 @@ Puts a token on the token channel. The value of this
 token  is read from the input based on the current lexer position.
 */
 func (lex *Lexer) Emit(tokenType TokenType) {
-//	fmt.Println("Emitting", TokenNames[tokenType])
 	lex.Tokens <- Token{Type: tokenType, Value: lex.Input[lex.Start:lex.Pos]}
 	lex.Start = lex.Pos
 }
@@ -199,10 +198,10 @@ func (lex *Lexer) SkipWhitespace() {
 
 func BeginLexing(name, input string, state LexFn) *Lexer {
 	l := &Lexer{
-		Name:   name,
-		Input:  input,
-		State:  state,
-		Tokens: make(chan Token, 3),
+		Name:        name,
+		Input:       input,
+		State:       state,
+		Tokens:      make(chan Token, 3),
 		NestedStack: lane.NewStack(),
 	}
 
@@ -232,8 +231,10 @@ func LexBegin(lex *Lexer) LexFn {
 	case next == 'l':
 		return LexListStart
 	default:
-		if closeState := lex.NestedStack.Pop(); closeState != nil {
-			return closeState.(func (*Lexer) LexFn)
+		if lex.NestedStack.Size() > 0 {
+			if closeState := lex.NestedStack.Pop(); closeState != nil {
+				return closeState.(func(*Lexer) LexFn)
+			}
 		}
 		if lex.IsEOF() {
 			lex.Emit(TOKEN_EOF)

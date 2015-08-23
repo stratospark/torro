@@ -140,12 +140,48 @@ func TestListLexing(t *testing.T) {
 			tListEnd,
 			tEOF,
 		}},
+		LexTest{"le", LexBegin, []Token{
+			tListStart,
+			tListEnd,
+			tEOF,
+		}},
+		LexTest{"li10ei-1ee", LexBegin, []Token{
+			tListStart,
+			tIntegerStart,
+			Token{TOKEN_INTEGER_VALUE, "10"},
+			tIntegerEnd,
+			tIntegerStart,
+			Token{TOKEN_INTEGER_VALUE, "-1"},
+			tIntegerEnd,
+			tListEnd,
+			tEOF,
+		}},
+		LexTest{"l4:thisi10el4:thati-1eee", LexBegin, []Token{
+			tListStart,
+			Token{TOKEN_STRING_LENGTH, "4"},
+			tColon,
+			Token{TOKEN_STRING_VALUE, "this"},
+			tIntegerStart,
+			Token{TOKEN_INTEGER_VALUE, "10"},
+			tIntegerEnd,
+			tListStart,
+			Token{TOKEN_STRING_LENGTH, "4"},
+			tColon,
+			Token{TOKEN_STRING_VALUE, "that"},
+			tIntegerStart,
+			Token{TOKEN_INTEGER_VALUE, "-1"},
+			tIntegerEnd,
+			tListEnd,
+			tListEnd,
+			tEOF,
+		}},
 	}
 
 	invalidTests := []LexTest{}
 
 	checkTests := func(tests []LexTest) {
 		for _, test := range tests {
+//			fmt.Println(test.Input)
 			Convey(fmt.Sprintf("%s", test.Input), func() {
 				lex := BeginLexing(".torrent", test.Input, test.StartState)
 				results := collect(lex)
