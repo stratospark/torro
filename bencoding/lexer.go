@@ -5,6 +5,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+	"strconv"
+	"cmd/internal/objfile"
 )
 
 type Lexer struct {
@@ -16,6 +18,7 @@ type Lexer struct {
 	Start int
 	Pos   int
 	Width int
+	StringLength int
 }
 
 func (lex *Lexer) String() string {
@@ -50,6 +53,7 @@ Increment the position
 */
 func (lex *Lexer) Inc() {
 	lex.Pos++
+	fmt.Println(lex)
 	if lex.Pos >= utf8.RuneCountInString(lex.Input) {
 		lex.Emit(TOKEN_EOF)
 	}
@@ -217,6 +221,43 @@ func LexBegin(lex *Lexer) LexFn {
 	}
 
 	panic("Shouldn't get here")
+}
+
+func LexStringStart(lex *Lexer) LexFn {
+	fmt.Println("LexStringStart")
+	for {
+		lex.Inc()
+
+		if strings.HasPrefix(lex.InputToEnd(), COLON) {
+			n, err := strconv.ParseInt(lex.CurrentInput(), 10, 64)
+			if err != nil {
+				return lex.Errorf("Invalid string length")
+			}
+			lex.StringLength = int(n)
+			lex.Emit(TOKEN_STRING_LENGTH)
+			return LexStringValue
+		}
+
+		if lex.IsEOF() {
+			return lex.Errorf("Unexpected EOF")
+		}
+	}
+}
+
+func LexStringValue(lex *Lexer) LexFn {
+	lex.Inc()
+	lex.Emit(TOKEN_COLON)
+
+	for i := 0; i<lex.StringLength; i++ {
+		if lex.IsEOF() {
+			return lex.Errorf("Unexpected EOF")
+		}
+		lex.Inc()
+	}
+
+	lex.Emit(TOKEN_STRING_VALUE)
+
+	return LexBegin
 }
 
 func LexIntegerStart(lex *Lexer) LexFn {
