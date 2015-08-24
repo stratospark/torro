@@ -101,8 +101,9 @@ func TestIntegerLexing(t *testing.T) {
 		}},
 	}
 
+	// TODO: Add non-integer test (i.e. float)
 	invalidTests := []LexTest{
-		LexTest{"iae", LexBegin, []Token{
+		LexTest{"iae", LexBegin, []Token{ // TODO: Reject non-digits
 			tIntegerStart,
 			Token{TOKEN_INTEGER_VALUE, "a"},
 			tIntegerEnd,

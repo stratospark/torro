@@ -2,12 +2,12 @@ package bencoding
 
 import (
 	"fmt"
-	"testing"
 	. "github.com/smartystreets/goconvey/convey"
+	"testing"
 )
 
 type ParseTest struct {
-	Input []Token
+	Input  []Token
 	Result interface{}
 }
 
@@ -17,6 +17,15 @@ func makeResultStruct(vals ...interface{}) []interface{} {
 		result = append(result, val)
 	}
 	return result
+}
+
+func checkTests(tests []ParseTest) {
+	for _, test := range tests {
+		Convey(fmt.Sprintf("%s", test.Input), func() {
+			result := Parse(test.Input)
+			So(result.Output, ShouldResemble, test.Result)
+		})
+	}
 }
 
 func TestStringParsing(t *testing.T) {
@@ -35,17 +44,7 @@ func TestStringParsing(t *testing.T) {
 		}, makeResultStruct("")},
 	}
 
-	invalidTests := []ParseTest{
-	}
-
-	checkTests := func(tests []ParseTest) {
-		for _, test := range tests {
-			Convey(fmt.Sprintf("%s", test.Input), func() {
-				result := Parse(test.Input)
-				So(result.Output, ShouldResemble, test.Result)
-			})
-		}
-	}
+	invalidTests := []ParseTest{}
 
 	Convey("Given valid inputs", t, func() {
 		checkTests(validTests)
@@ -56,7 +55,47 @@ func TestStringParsing(t *testing.T) {
 	})
 
 }
-//
+
+func TestIntegerParsing(t *testing.T) {
+	validTests := []ParseTest{
+		ParseTest{[]Token{
+			tIntegerStart,
+			Token{TOKEN_INTEGER_VALUE, "3"},
+			tIntegerEnd,
+			tEOF,
+		}, makeResultStruct(3)},
+		ParseTest{[]Token{
+			tIntegerStart,
+			Token{TOKEN_INTEGER_VALUE, "10"},
+			tIntegerEnd,
+			tEOF,
+		}, makeResultStruct(10)},
+		ParseTest{[]Token{
+			tIntegerStart,
+			Token{TOKEN_INTEGER_VALUE, "-1"},
+			tIntegerEnd,
+			tEOF,
+		}, makeResultStruct(-1)},
+		ParseTest{[]Token{
+			tIntegerStart,
+			Token{TOKEN_INTEGER_VALUE, "0"},
+			tIntegerEnd,
+			tEOF,
+		}, makeResultStruct(0)},
+	}
+
+	invalidTests := []ParseTest{}
+
+	Convey("Given valid inputs", t, func() {
+		checkTests(validTests)
+	})
+
+	Convey("Given invalid inputs", t, func() {
+		checkTests(invalidTests)
+	})
+
+}
+
 //func TestIntegerLexing(t *testing.T) {
 //	validTests := []LexTest{
 //		LexTest{"i3e", LexBegin, []Token{

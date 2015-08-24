@@ -13,6 +13,14 @@ type Parser struct {
 	Pos int
 }
 
+func (parser *Parser) CurrentType() TokenType {
+	return parser.Tokens[parser.Pos].Type
+}
+
+func (parser *Parser) CurrentValue() string {
+	return parser.Tokens[parser.Pos].Value
+}
+
 type ParseFn func(*Parser) ParseFn
 
 func Parse(tokens []Token) *Parser {
@@ -45,9 +53,13 @@ func parseBegin(parser *Parser) ParseFn {
 	switch token.Type {
 	case TOKEN_STRING_LENGTH:
 		return parseString
+	case TOKEN_INTEGER_START:
+		return parseInteger
 	case TOKEN_COLON:
+		// shouldn't get here directly
 		return nil
 	case TOKEN_STRING_VALUE:
+		// shouldn't get here directly
 		return nil
 	default:
 		return nil
@@ -57,26 +69,47 @@ func parseBegin(parser *Parser) ParseFn {
 func parseString(parser *Parser) ParseFn {
 	fmt.Println("ParseString")
 	// Get Length
-	strLength, err := strconv.ParseInt(parser.Tokens[parser.Pos].Value, 10, 64)
+	strLength, err := strconv.ParseInt(parser.CurrentValue(), 10, 64)
 	if err != nil {
 		panic("NOT A VALID STRING LENGTH")
 	}
 	parser.Pos++
 
 	// Get Colon
-	colon := parser.Tokens[parser.Pos].Value
+	colon := parser.CurrentValue()
 	if colon != ":" {
 		panic("MISSING REQUIRED COLON")
 	}
 	parser.Pos++
 
 	// Get Value
-	strValue := parser.Tokens[parser.Pos].Value
+	strValue := parser.CurrentValue()
 	if len(strValue) != int(strLength) {
 		panic("STRING LENGTH DOESNT MATCH")
 	}
 	fmt.Println(strValue)
 	parser.Output = append(parser.Output, strValue)
+	parser.Pos++
+
+	return parseBegin
+}
+
+func parseInteger(parser *Parser) ParseFn {
+	fmt.Println("ParseInteger")
+
+	//parser.CurrentValue() == TOKEN_INTEGER_START
+	parser.Pos++
+
+	num, err := strconv.ParseInt(parser.CurrentValue(), 10, 64)
+	if err != nil {
+		panic("NOT A VALID INTEGER")
+	}
+	parser.Output = append(parser.Output, int(num))
+	parser.Pos++
+
+	if parser.CurrentType() != TOKEN_INTEGER_END {
+		panic("MISSING INTEGER END")
+	}
 	parser.Pos++
 
 	return parseBegin
