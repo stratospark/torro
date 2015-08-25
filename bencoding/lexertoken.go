@@ -1,8 +1,9 @@
 package bencoding
+
 import "fmt"
 
 type Token struct {
-	Type TokenType
+	Type  TokenType
 	Value string
 }
 
@@ -65,11 +66,11 @@ func (t Token) String() string {
 const EOF rune = 0
 
 const (
-	COLON string = ":"
+	COLON         string = ":"
 	INTEGER_START string = "i"
-	INTEGER_END string = "e"
-	LIST_START string = "l"
-	LIST_END string = "e"
-	DICT_START string = "d"
-	DICT_END string = "e"
+	INTEGER_END   string = "e"
+	LIST_START    string = "l"
+	LIST_END      string = "e"
+	DICT_START    string = "d"
+	DICT_END      string = "e"
 )

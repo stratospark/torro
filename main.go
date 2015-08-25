@@ -1,8 +1,9 @@
 package main
+
 import (
-	"io/ioutil"
-	"github.com/stratospark/torro/bencoding"
 	"fmt"
+	"github.com/stratospark/torro/bencoding"
+	"io/ioutil"
 )
 
 func main() {
@@ -24,4 +25,3 @@ func main() {
 	}
 	fmt.Println(tokenCounts)
 }
-

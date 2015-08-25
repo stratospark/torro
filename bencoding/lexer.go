@@ -39,7 +39,6 @@ func (lex *Lexer) String() string {
 	)
 }
 
-
 func collect(lex *Lexer) (tokens []Token) {
 	for {
 		token := lex.NextToken()

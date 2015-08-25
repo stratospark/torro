@@ -95,7 +95,7 @@ type Parser struct {
 	Output interface{}
 	Stack  *lane.Stack
 
-	Pos int
+	Pos     int
 	NextKey string
 }
 
@@ -186,7 +186,7 @@ func addToContainer(parser *Parser, c *Container, key string) {
 			panic("CANT ADD TO INTEGER")
 		case ContainerList:
 			head.Append(*c)
-			if c.Type == ContainerList || c.Type == ContainerDict  {
+			if c.Type == ContainerList || c.Type == ContainerDict {
 				parser.Stack.Push(c)
 			}
 		case ContainerDict:
