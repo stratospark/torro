@@ -153,24 +153,26 @@ func parseBegin(parser *Parser) ParseFn {
 		return parseInteger
 	case TOKEN_LIST_START:
 		return parseList
+	case TOKEN_DICT_START:
+		return parseDict
 	case TOKEN_LIST_END, TOKEN_DICT_END:
+		// Pop stack so new items can be added to the parent container
 		parser.Pos++
 		if parser.Stack.Size() > 1 {
 			parser.Stack.Pop()
 		}
 		return parseBegin
-	case TOKEN_DICT_START:
-		return parseDict
-	case TOKEN_COLON:
-		// shouldn't get here directly
-		return nil
-	case TOKEN_STRING_VALUE:
-		// shouldn't get here directly
-		return nil
-	default:
+	case TOKEN_EOF:
+		// TODO: Check if containers have been closed
+
+		// Collapse root Container data structure into interface{}
 		container := parser.Stack.Head().(*Container)
 		parser.Output = container.Collapse()
 		return nil
+	default:
+		// Some tokens should only be handled by other state functions
+		fmt.Println("Current Token: ", parser.Pos, ", Total Tokens: ", len(parser.Tokens))
+		panic(fmt.Sprint("UNEXPECTED TOKEN TYPE: ", token.Type))
 	}
 }
 
