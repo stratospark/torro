@@ -14,7 +14,7 @@ type ParseTest struct {
 /*
 Take input vals of arbitrary types and return an array of them
 */
-func makeResultStruct(vals ...interface{}) []interface{} {
+func makeResultList(vals ...interface{}) []interface{} {
 	result := []interface{}{}
 	for _, val := range vals {
 		result = append(result, val)
@@ -114,7 +114,7 @@ func TestListParsing(t *testing.T) {
 			Token{TOKEN_STRING_VALUE, "eggs"},
 			tListEnd,
 			tEOF,
-		}, makeResultStruct("spam", "eggs")},
+		}, makeResultList("spam", "eggs")},
 		ParseTest{[]Token{
 			tListStart,
 			Token{TOKEN_STRING_LENGTH, "4"},
@@ -125,7 +125,7 @@ func TestListParsing(t *testing.T) {
 			tIntegerEnd,
 			tListEnd,
 			tEOF,
-		}, makeResultStruct("spam", 10)},
+		}, makeResultList("spam", 10)},
 		ParseTest{[]Token{
 			tListStart,
 			Token{TOKEN_STRING_LENGTH, "3"},
@@ -144,7 +144,7 @@ func TestListParsing(t *testing.T) {
 			Token{TOKEN_STRING_VALUE, "there"},
 			tListEnd,
 			tEOF,
-		}, makeResultStruct("hey", makeResultStruct(1, 2), "there")},
+		}, makeResultList("hey", makeResultList(1, 2), "there")},
 		ParseTest{[]Token{
 			tListStart,
 			tListStart,
@@ -153,7 +153,7 @@ func TestListParsing(t *testing.T) {
 			tListEnd,
 			tListEnd,
 			tEOF,
-		}, makeResultStruct(makeResultStruct(makeResultStruct()))},
+		}, makeResultList(makeResultList(makeResultList()))},
 	}
 
 	invalidTests := []ParseTest{}
@@ -166,6 +166,87 @@ func TestListParsing(t *testing.T) {
 		checkTests(invalidTests)
 	})
 
+}
+
+func TestDictParsing(t *testing.T) {
+	validTests := []ParseTest{
+//		ParseTest{
+//			[]Token{
+//				tDictStart,
+//				Token{TOKEN_STRING_LENGTH, "3"},
+//				tColon,
+//				Token{TOKEN_STRING_VALUE, "cow"},
+//				Token{TOKEN_STRING_LENGTH, "3"},
+//				tColon,
+//				Token{TOKEN_STRING_VALUE, "moo"},
+//				Token{TOKEN_STRING_LENGTH, "4"},
+//				tColon,
+//				Token{TOKEN_STRING_VALUE, "spam"},
+//				Token{TOKEN_STRING_LENGTH, "4"},
+//				tColon,
+//				Token{TOKEN_STRING_VALUE, "eggs"},
+//				tDictEnd,
+//				tEOF,
+//			}, map[string]interface{}{"cow": "moo", "spam": "eggs"},
+//		},
+//		ParseTest{
+//			[]Token{
+//				tDictStart,
+//				Token{TOKEN_STRING_LENGTH, "4"},
+//				tColon,
+//				Token{TOKEN_STRING_VALUE, "spam"},
+//				tListStart,
+//				Token{TOKEN_STRING_LENGTH, "1"},
+//				tColon,
+//				Token{TOKEN_STRING_VALUE, "a"},
+//				Token{TOKEN_STRING_LENGTH, "1"},
+//				tColon,
+//				Token{TOKEN_STRING_VALUE, "b"},
+//				tListEnd,
+//				tDictEnd,
+//				tEOF,
+//			}, map[string]interface{}{"spam": makeResultList("a", "b")},
+//		},
+		ParseTest{
+			[]Token{
+				tDictStart,
+				Token{TOKEN_STRING_LENGTH, "4"},
+				tColon,
+				Token{TOKEN_STRING_VALUE, "dict"},
+				tDictStart,
+				Token{TOKEN_STRING_LENGTH, "1"},
+				tColon,
+				Token{TOKEN_STRING_VALUE, "a"},
+				tListStart,
+				tIntegerStart,
+				Token{TOKEN_INTEGER_VALUE, "10"},
+				tIntegerEnd,
+				Token{TOKEN_STRING_LENGTH, "1"},
+				tColon,
+				Token{TOKEN_STRING_VALUE, "b"},
+				tListEnd,
+				tDictEnd,
+				Token{TOKEN_STRING_LENGTH, "3"},
+				tColon,
+				Token{TOKEN_STRING_VALUE, "int"},
+				tIntegerStart,
+				Token{TOKEN_INTEGER_VALUE, "99"},
+				tIntegerEnd,
+				tDictEnd,
+				tEOF,
+			}, map[string]interface{}{"dict": map[string]interface{}{"a": makeResultList(10, "b")}, "int": 99},
+		},
+	}
+
+	invalidTests := []ParseTest{}
+
+	Convey("Given valid inputs", t, func() {
+		checkTests(validTests)
+	})
+
+	Convey("Given invalid inputs", t, func() {
+		checkTests(invalidTests)
+	})
 }
 
 //func TestIntegerLexing(t *testing.T) {
