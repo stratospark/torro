@@ -11,6 +11,9 @@ type ParseTest struct {
 	Result interface{}
 }
 
+/*
+Take input vals of arbitrary types and return an array of them
+*/
 func makeResultStruct(vals ...interface{}) []interface{} {
 	result := []interface{}{}
 	for _, val := range vals {
@@ -19,6 +22,9 @@ func makeResultStruct(vals ...interface{}) []interface{} {
 	return result
 }
 
+/*
+Execute given tests
+*/
 func checkTests(tests []ParseTest) {
 	for _, test := range tests {
 		Convey(fmt.Sprintf("%s", test.Input), func() {
@@ -35,13 +41,13 @@ func TestStringParsing(t *testing.T) {
 			tColon,
 			Token{TOKEN_STRING_VALUE, "spam"},
 			tEOF,
-		}, makeResultStruct("spam")},
+		}, "spam"},
 		ParseTest{[]Token{
 			Token{TOKEN_STRING_LENGTH, "0"},
 			tColon,
 			Token{TOKEN_STRING_VALUE, ""},
 			tEOF,
-		}, makeResultStruct("")},
+		}, ""},
 	}
 
 	invalidTests := []ParseTest{}
@@ -63,25 +69,91 @@ func TestIntegerParsing(t *testing.T) {
 			Token{TOKEN_INTEGER_VALUE, "3"},
 			tIntegerEnd,
 			tEOF,
-		}, makeResultStruct(3)},
+		}, 3},
 		ParseTest{[]Token{
 			tIntegerStart,
 			Token{TOKEN_INTEGER_VALUE, "10"},
 			tIntegerEnd,
 			tEOF,
-		}, makeResultStruct(10)},
+		}, 10},
 		ParseTest{[]Token{
 			tIntegerStart,
 			Token{TOKEN_INTEGER_VALUE, "-1"},
 			tIntegerEnd,
 			tEOF,
-		}, makeResultStruct(-1)},
+		}, -1},
 		ParseTest{[]Token{
 			tIntegerStart,
 			Token{TOKEN_INTEGER_VALUE, "0"},
 			tIntegerEnd,
 			tEOF,
-		}, makeResultStruct(0)},
+		}, 0},
+	}
+
+	invalidTests := []ParseTest{}
+
+	Convey("Given valid inputs", t, func() {
+		checkTests(validTests)
+	})
+
+	Convey("Given invalid inputs", t, func() {
+		checkTests(invalidTests)
+	})
+
+}
+
+func TestListParsing(t *testing.T) {
+	validTests := []ParseTest{
+		ParseTest{[]Token{
+			tListStart,
+			Token{TOKEN_STRING_LENGTH, "4"},
+			tColon,
+			Token{TOKEN_STRING_VALUE, "spam"},
+			Token{TOKEN_STRING_LENGTH, "4"},
+			tColon,
+			Token{TOKEN_STRING_VALUE, "eggs"},
+			tListEnd,
+			tEOF,
+		}, makeResultStruct("spam", "eggs")},
+		ParseTest{[]Token{
+			tListStart,
+			Token{TOKEN_STRING_LENGTH, "4"},
+			tColon,
+			Token{TOKEN_STRING_VALUE, "spam"},
+			tIntegerStart,
+			Token{TOKEN_INTEGER_VALUE, "10"},
+			tIntegerEnd,
+			tListEnd,
+			tEOF,
+		}, makeResultStruct("spam", 10)},
+		ParseTest{[]Token{
+			tListStart,
+			Token{TOKEN_STRING_LENGTH, "3"},
+			tColon,
+			Token{TOKEN_STRING_VALUE, "hey"},
+			tListStart,
+			tIntegerStart,
+			Token{TOKEN_INTEGER_VALUE, "1"},
+			tIntegerEnd,
+			tIntegerStart,
+			Token{TOKEN_INTEGER_VALUE, "2"},
+			tIntegerEnd,
+			tListEnd,
+			Token{TOKEN_STRING_LENGTH, "5"},
+			tColon,
+			Token{TOKEN_STRING_VALUE, "there"},
+			tListEnd,
+			tEOF,
+		}, makeResultStruct("hey", makeResultStruct(1, 2), "there")},
+		ParseTest{[]Token{
+			tListStart,
+			tListStart,
+			tListStart,
+			tListEnd,
+			tListEnd,
+			tListEnd,
+			tEOF,
+		}, makeResultStruct(makeResultStruct(makeResultStruct()))},
 	}
 
 	invalidTests := []ParseTest{}
