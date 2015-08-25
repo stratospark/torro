@@ -176,6 +176,40 @@ func parseBegin(parser *Parser) ParseFn {
 	}
 }
 
+func addToContainer(parser *Parser, c *Container, key string) {
+	if parser.Stack.Head() != nil {
+		head := parser.Stack.Head().(*Container)
+		switch head.Type {
+		case ContainerBString:
+			panic("CANT ADD TO STRING")
+		case ContainerInteger:
+			panic("CANT ADD TO INTEGER")
+		case ContainerList:
+			head.Append(*c)
+			if c.Type == ContainerList || c.Type == ContainerDict  {
+				parser.Stack.Push(c)
+			}
+		case ContainerDict:
+			if parser.NextKey != "" {
+				head.SetKey(parser.NextKey, *c)
+				parser.NextKey = ""
+				if c.Type == ContainerList || c.Type == ContainerDict {
+					parser.Stack.Push(c)
+				}
+			} else {
+				if key != "" {
+					parser.NextKey = key
+				} else {
+					panic("DICT KEY NOT SET")
+				}
+			}
+		}
+	} else {
+		container := c
+		parser.Stack.Push(container)
+	}
+}
+
 func parseBString(parser *Parser) ParseFn {
 	// Get Length
 	strLength, err := strconv.ParseInt(parser.CurrentValue(), 10, 64)
@@ -196,30 +230,8 @@ func parseBString(parser *Parser) ParseFn {
 	if len(strValue) != int(strLength) {
 		panic("STRING LENGTH DOESNT MATCH")
 	}
-
-	if parser.Stack.Head() != nil {
-		head := parser.Stack.Head().(*Container)
-		switch head.Type {
-		case ContainerBString:
-			panic("CANT ADD TO STRING")
-		case ContainerInteger:
-			panic("CANT ADD TO INTEGER")
-		case ContainerList:
-			head.Append(Container{Type: ContainerBString, BString: strValue})
-		case ContainerDict:
-			if parser.NextKey != "" {
-				head.SetKey(parser.NextKey, Container{Type: ContainerBString, BString: strValue})
-				parser.NextKey = ""
-			} else {
-				parser.NextKey = strValue
-			}
-		}
-	} else {
-		container := &Container{Type: ContainerBString, BString: strValue}
-		parser.Stack.Push(container)
-	}
-
 	parser.Pos++
+	addToContainer(parser, &Container{Type: ContainerBString, BString: strValue}, strValue)
 
 	return parseBegin
 }
@@ -232,29 +244,8 @@ func parseInteger(parser *Parser) ParseFn {
 	if err != nil {
 		panic("NOT A VALID INTEGER")
 	}
-
-	if parser.Stack.Head() != nil {
-		head := parser.Stack.Head().(*Container)
-		switch head.Type {
-		case ContainerBString:
-			panic("CANT ADD TO STRING")
-		case ContainerInteger:
-			panic("CANT ADD TO INTEGER")
-		case ContainerList:
-			head.Append(Container{Type: ContainerInteger, Integer: int(num)})
-		case ContainerDict:
-			if parser.NextKey != "" {
-				head.SetKey(parser.NextKey, Container{Type: ContainerInteger, Integer: int(num)})
-				parser.NextKey = ""
-			} else {
-				panic("NO DICT KEY SET")
-			}
-		}
-	} else {
-		container := Container{Type: ContainerInteger, Integer: int(num)}
-		parser.Stack.Push(&container)
-	}
 	parser.Pos++
+	addToContainer(parser, &Container{Type: ContainerInteger, Integer: int(num)}, "")
 
 	if parser.CurrentType() != TOKEN_INTEGER_END {
 		panic("MISSING INTEGER END")
@@ -269,31 +260,7 @@ func parseList(parser *Parser) ParseFn {
 	parser.Pos++
 
 	list := make([]Container, 0)
-	if parser.Stack.Head() != nil {
-		head := parser.Stack.Head().(*Container)
-		switch head.Type {
-		case ContainerBString:
-			panic("CANT ADD TO STRING")
-		case ContainerInteger:
-			panic("CANT ADD TO INTEGER")
-		case ContainerList:
-			container := Container{Type: ContainerList, List: &list}
-			head.Append(container)
-			parser.Stack.Push(&container)
-		case ContainerDict:
-			container := Container{Type: ContainerList, List: &list}
-			if parser.NextKey != "" {
-				head.SetKey(parser.NextKey, container)
-				parser.NextKey = ""
-				parser.Stack.Push(&container)
-			} else {
-				panic("NO DICT KEY SET")
-			}
-		}
-	} else {
-		container := Container{Type: ContainerList, List: &list}
-		parser.Stack.Push(&container)
-	}
+	addToContainer(parser, &Container{Type: ContainerList, List: &list}, "")
 
 	return parseBegin
 }
@@ -303,31 +270,7 @@ func parseDict(parser *Parser) ParseFn {
 	parser.Pos++
 
 	dict := make(map[string]Container)
-	if parser.Stack.Head() != nil {
-		head := parser.Stack.Head().(*Container)
-		switch head.Type {
-		case ContainerBString:
-			panic("CANT ADD TO STRING")
-		case ContainerInteger:
-			panic("CANT ADD TO INTEGER")
-		case ContainerList:
-			container := Container{Type: ContainerDict, Dict: dict}
-			head.Append(container)
-			parser.Stack.Push(&container)
-		case ContainerDict:
-			container := Container{Type: ContainerDict, Dict: dict}
-			if parser.NextKey != "" {
-				head.SetKey(parser.NextKey, container)
-				parser.NextKey = ""
-				parser.Stack.Push(&container)
-			} else {
-				panic("NO DICT KEY SET")
-			}
-		}
-	} else {
-		container := Container{Type: ContainerDict, Dict: dict}
-		parser.Stack.Push(&container)
-	}
+	addToContainer(parser, &Container{Type: ContainerDict, Dict: dict}, "")
 
 	return parseBegin
 }
