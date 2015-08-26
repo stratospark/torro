@@ -113,9 +113,8 @@ func TestIntegerLexing(t *testing.T) {
 		}},
 	}
 
-	// TODO: Add non-integer test (i.e. float)
 	invalidTests := []LexTest{
-		LexTest{"iae", LexBegin, []Token{ // TODO: Reject non-digits
+		LexTest{"iae", LexBegin, []Token{
 			tIntegerStart,
 			Token{TOKEN_ERROR, LexErrInvalidCharacter},
 		}},
@@ -124,6 +123,10 @@ func TestIntegerLexing(t *testing.T) {
 			Token{TOKEN_ERROR, LexErrUnexpectedEOF},
 		}},
 		LexTest{"ie", LexBegin, []Token{
+			tIntegerStart,
+			Token{TOKEN_ERROR, LexErrInvalidCharacter},
+		}},
+		LexTest{"i1.1e", LexBegin, []Token{
 			tIntegerStart,
 			Token{TOKEN_ERROR, LexErrInvalidCharacter},
 		}},
@@ -219,11 +222,17 @@ func TestListLexing(t *testing.T) {
 			tListEnd,
 			Token{TOKEN_ERROR, LexErrUnclosedDelimeter},
 		}},
+		LexTest{"lleee", LexBegin, []Token{
+			tListStart,
+			tListStart,
+			tListEnd,
+			tListEnd,
+			Token{TOKEN_ERROR, LexErrInvalidCharacter},
+		}},
 	}
 
 	checkTests := func(tests []LexTest) {
 		for _, test := range tests {
-			//			fmt.Println(test.Input)
 			Convey(fmt.Sprintf("%s", test.Input), func() {
 				lex := BeginLexing(".torrent", test.Input, test.StartState)
 				results := collect(lex)
@@ -307,7 +316,17 @@ func TestDictLexing(t *testing.T) {
 		}},
 	}
 
-	invalidTests := []LexTest{}
+	invalidTests := []LexTest{
+		LexTest{"d", LexBegin, []Token{
+			tDictStart,
+			Token{TOKEN_ERROR, LexErrUnclosedDelimeter},
+		}},
+		LexTest{"dee", LexBegin, []Token{
+			tDictStart,
+			tDictEnd,
+			Token{TOKEN_ERROR, LexErrInvalidCharacter},
+		}},
+	}
 
 	checkTests := func(tests []LexTest) {
 		for _, test := range tests {
