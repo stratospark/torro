@@ -91,6 +91,7 @@ Puts a token on the token channel. The value of this
 token  is read from the input based on the current lexer position.
 */
 func (lex *Lexer) Emit(tokenType TokenType) {
+	fmt.Println("Emit ", tokenType)
 	lex.Tokens <- Token{Type: tokenType, Value: lex.Input[lex.Start:lex.Pos]}
 	lex.Start = lex.Pos
 }
@@ -266,7 +267,10 @@ func LexBegin(lex *Lexer) LexFn {
 
 func LexStringStart(lex *Lexer) LexFn {
 	for {
-		lex.Inc()
+		lex.Pos++
+		if lex.IsEOF() {
+			return lex.Errorf(LexErrUnexpectedEOF)
+		}
 
 		if strings.HasPrefix(lex.InputToEnd(), COLON) {
 			n, err := strconv.ParseInt(lex.CurrentInput(), 10, 64)

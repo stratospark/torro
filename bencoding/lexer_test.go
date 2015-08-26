@@ -37,6 +37,12 @@ func TestStringLexing(t *testing.T) {
 			Token{TOKEN_STRING_VALUE, ""},
 			tEOF,
 		}},
+		LexTest{"1::", LexBegin, []Token{
+			Token{TOKEN_STRING_LENGTH, "1"},
+			tColon,
+			Token{TOKEN_STRING_VALUE, ":"},
+			tEOF,
+		}},
 	}
 
 	invalidTests := []LexTest{
@@ -51,7 +57,14 @@ func TestStringLexing(t *testing.T) {
 			tColon,
 			Token{TOKEN_ERROR, LexErrUnexpectedEOF},
 		}},
+		LexTest{"5asdfg", LexBegin, []Token {
+			Token{TOKEN_ERROR, LexErrUnexpectedEOF},
+		}},
+		LexTest{"5", LexBegin, []Token {
+			Token{TOKEN_ERROR, LexErrUnexpectedEOF},
+		}},
 	}
+
 
 	checkTests := func(tests []LexTest) {
 		for _, test := range tests {
