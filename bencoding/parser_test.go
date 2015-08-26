@@ -25,7 +25,7 @@ func makeResultList(vals ...interface{}) []interface{} {
 /*
 Execute given tests
 */
-func checkTests(tests []ParseTest) {
+func checkParseTests(tests []ParseTest) {
 	for _, test := range tests {
 		Convey(fmt.Sprintf("%s", test.Input), func() {
 			result := Parse(test.Input)
@@ -53,11 +53,11 @@ func TestStringParsing(t *testing.T) {
 	invalidTests := []ParseTest{}
 
 	Convey("Given valid inputs", t, func() {
-		checkTests(validTests)
+		checkParseTests(validTests)
 	})
 
 	Convey("Given invalid inputs", t, func() {
-		checkTests(invalidTests)
+		checkParseTests(invalidTests)
 	})
 
 }
@@ -93,11 +93,11 @@ func TestIntegerParsing(t *testing.T) {
 	invalidTests := []ParseTest{}
 
 	Convey("Given valid inputs", t, func() {
-		checkTests(validTests)
+		checkParseTests(validTests)
 	})
 
 	Convey("Given invalid inputs", t, func() {
-		checkTests(invalidTests)
+		checkParseTests(invalidTests)
 	})
 
 }
@@ -159,11 +159,11 @@ func TestListParsing(t *testing.T) {
 	invalidTests := []ParseTest{}
 
 	Convey("Given valid inputs", t, func() {
-		checkTests(validTests)
+		checkParseTests(validTests)
 	})
 
 	Convey("Given invalid inputs", t, func() {
-		checkTests(invalidTests)
+		checkParseTests(invalidTests)
 	})
 
 }
@@ -241,10 +241,10 @@ func TestDictParsing(t *testing.T) {
 	invalidTests := []ParseTest{}
 
 	Convey("Given valid inputs", t, func() {
-		checkTests(validTests)
+		checkParseTests(validTests)
 	})
 
 	Convey("Given invalid inputs", t, func() {
-		checkTests(invalidTests)
+		checkParseTests(invalidTests)
 	})
 }

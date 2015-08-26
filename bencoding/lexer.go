@@ -91,7 +91,6 @@ Puts a token on the token channel. The value of this
 token  is read from the input based on the current lexer position.
 */
 func (lex *Lexer) Emit(tokenType TokenType) {
-	fmt.Println("Emit ", tokenType)
 	lex.Tokens <- Token{Type: tokenType, Value: lex.Input[lex.Start:lex.Pos]}
 	lex.Start = lex.Pos
 }
