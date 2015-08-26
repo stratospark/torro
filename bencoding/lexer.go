@@ -308,7 +308,12 @@ func LexIntegerStart(lex *Lexer) LexFn {
 
 func LexIntegerValue(lex *Lexer) LexFn {
 	for {
-		lex.Pos++
+		next := lex.Peek()
+		if unicode.IsDigit(next) || next == '-' {
+			lex.Pos++
+		} else {
+			return lex.Errorf(LexErrInvalidCharacter)
+		}
 
 		if strings.HasPrefix(lex.InputToEnd(), INTEGER_END) {
 			lex.Emit(TOKEN_INTEGER_VALUE)

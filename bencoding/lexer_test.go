@@ -57,14 +57,13 @@ func TestStringLexing(t *testing.T) {
 			tColon,
 			Token{TOKEN_ERROR, LexErrUnexpectedEOF},
 		}},
-		LexTest{"5asdfg", LexBegin, []Token {
+		LexTest{"5asdfg", LexBegin, []Token{
 			Token{TOKEN_ERROR, LexErrUnexpectedEOF},
 		}},
-		LexTest{"5", LexBegin, []Token {
+		LexTest{"5", LexBegin, []Token{
 			Token{TOKEN_ERROR, LexErrUnexpectedEOF},
 		}},
 	}
-
 
 	checkTests := func(tests []LexTest) {
 		for _, test := range tests {
@@ -118,13 +117,15 @@ func TestIntegerLexing(t *testing.T) {
 	invalidTests := []LexTest{
 		LexTest{"iae", LexBegin, []Token{ // TODO: Reject non-digits
 			tIntegerStart,
-			Token{TOKEN_INTEGER_VALUE, "a"},
-			tIntegerEnd,
-			tEOF,
+			Token{TOKEN_ERROR, LexErrInvalidCharacter},
 		}},
 		LexTest{"i10", LexBegin, []Token{
 			tIntegerStart,
 			Token{TOKEN_ERROR, LexErrUnexpectedEOF},
+		}},
+		LexTest{"ie", LexBegin, []Token{
+			tIntegerStart,
+			Token{TOKEN_ERROR, LexErrInvalidCharacter},
 		}},
 	}
 
