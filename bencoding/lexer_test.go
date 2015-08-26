@@ -23,6 +23,16 @@ var (
 	tEOF          = Token{TOKEN_EOF, ""}
 )
 
+func checkLexTests(tests []LexTest) {
+	for _, test := range tests {
+		Convey(fmt.Sprintf("%s", test.Input), func() {
+			lex := BeginLexing(".torrent", test.Input, test.StartState)
+			results := collect(lex)
+			So(results, ShouldResemble, test.Result)
+		})
+	}
+}
+
 func TestStringLexing(t *testing.T) {
 	validTests := []LexTest{
 		LexTest{"4:spam", LexBegin, []Token{
@@ -65,22 +75,12 @@ func TestStringLexing(t *testing.T) {
 		}},
 	}
 
-	checkTests := func(tests []LexTest) {
-		for _, test := range tests {
-			Convey(fmt.Sprintf("%s", test.Input), func() {
-				lex := BeginLexing(".torrent", test.Input, test.StartState)
-				results := collect(lex)
-				So(results, ShouldResemble, test.Result)
-			})
-		}
-	}
-
 	Convey("Given valid inputs", t, func() {
-		checkTests(validTests)
+		checkLexTests(validTests)
 	})
 
 	Convey("Given invalid inputs", t, func() {
-		checkTests(invalidTests)
+		checkLexTests(invalidTests)
 	})
 
 }
@@ -132,22 +132,12 @@ func TestIntegerLexing(t *testing.T) {
 		}},
 	}
 
-	checkTests := func(tests []LexTest) {
-		for _, test := range tests {
-			Convey(fmt.Sprintf("%s", test.Input), func() {
-				lex := BeginLexing(".torrent", test.Input, test.StartState)
-				results := collect(lex)
-				So(results, ShouldResemble, test.Result)
-			})
-		}
-	}
-
 	Convey("Given valid inputs", t, func() {
-		checkTests(validTests)
+		checkLexTests(validTests)
 	})
 
 	Convey("Given invalid inputs", t, func() {
-		checkTests(invalidTests)
+		checkLexTests(invalidTests)
 	})
 
 }
@@ -231,22 +221,12 @@ func TestListLexing(t *testing.T) {
 		}},
 	}
 
-	checkTests := func(tests []LexTest) {
-		for _, test := range tests {
-			Convey(fmt.Sprintf("%s", test.Input), func() {
-				lex := BeginLexing(".torrent", test.Input, test.StartState)
-				results := collect(lex)
-				So(results, ShouldResemble, test.Result)
-			})
-		}
-	}
-
 	Convey("Given valid inputs", t, func() {
-		checkTests(validTests)
+		checkLexTests(validTests)
 	})
 
 	Convey("Given invalid inputs", t, func() {
-		checkTests(invalidTests)
+		checkLexTests(invalidTests)
 	})
 
 }
@@ -328,23 +308,12 @@ func TestDictLexing(t *testing.T) {
 		}},
 	}
 
-	checkTests := func(tests []LexTest) {
-		for _, test := range tests {
-			//			fmt.Println(test.Input)
-			Convey(fmt.Sprintf("%s", test.Input), func() {
-				lex := BeginLexing(".torrent", test.Input, test.StartState)
-				results := collect(lex)
-				So(results, ShouldResemble, test.Result)
-			})
-		}
-	}
-
 	Convey("Given valid inputs", t, func() {
-		checkTests(validTests)
+		checkLexTests(validTests)
 	})
 
 	Convey("Given invalid inputs", t, func() {
-		checkTests(invalidTests)
+		checkLexTests(invalidTests)
 	})
 
 }
