@@ -46,14 +46,6 @@ func (c *Container) String() string {
 	}
 }
 
-func (c *Container) SetBString(val string) {
-	c.BString = val
-}
-
-func (c *Container) SetInteger(val int) {
-	c.Integer = val
-}
-
 func (c *Container) SetKey(key string, val Container) {
 	c.Dict[key] = val
 }
