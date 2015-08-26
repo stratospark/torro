@@ -22,6 +22,9 @@ func main() {
 	output := bencoding.Parse(tokens)
 	result := output.Output.(map[string]interface{})
 
+	pretty.Println("Announce: ", result["announce"])
+	pretty.Println("Announce-List", result["annnounce-list"])
+
 	creationDate := int64(result["creation date"].(int))
 	t := time.Unix(creationDate, 0)
 	pretty.Println("Creation Date:", t.String())
