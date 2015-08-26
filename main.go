@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/kr/pretty"
 	"github.com/stratospark/torro/bencoding"
 	"io/ioutil"
@@ -10,7 +11,10 @@ import (
 func main() {
 	println("TORRO!")
 
-	data, err := ioutil.ReadFile("ubuntu.torrent")
+	//	filename := "testfiles/ubuntu.torrent"
+	filename := "testfiles/TheInternetsOwnBoyTheStoryOfAaronSwartz_archive.torrent"
+	fmt.Println("Parsing: ", filename)
+	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		panic(err)
 	}
@@ -18,6 +22,16 @@ func main() {
 	torrentStr := string(data)
 	lex := bencoding.BeginLexing(".torrent", torrentStr, bencoding.LexBegin)
 	tokens := bencoding.Collect(lex)
+
+	//	pretty.Print(output.Output)
+	tokenCounts := make(map[bencoding.Token]int)
+	for _, t := range tokens {
+		tokenCounts[t]++
+		fmt.Println(t)
+	}
+	//	fmt.Println(tokenCounts)
+
+	return
 
 	output := bencoding.Parse(tokens)
 	result := output.Output.(map[string]interface{})
@@ -45,12 +59,4 @@ func main() {
 	pretty.Println("Info/Length:", info["length"])
 	pretty.Println("Info/md5sum:", info["md5sum"])
 	pretty.Println("Info/files:", info["files"])
-
-	//	pretty.Print(output.Output)
-	//	tokenCounts := make(map[bencoding.Token]int)
-	//	for _, t := range tokens {
-	//		tokenCounts[t]++
-	//		fmt.Println(t)
-	//	}
-	//	fmt.Println(tokenCounts)
 }

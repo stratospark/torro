@@ -12,7 +12,15 @@ type File struct {
 	Path   string
 }
 
+type InfoMode int
+
+const (
+	InfoModeSingle InfoMode = iota
+	InfoModeMultiple
+)
+
 type Info struct {
+	Mode        InfoMode
 	PieceLength int
 	Pieces      string
 	Private     bool
@@ -48,6 +56,12 @@ func NewMetainfo(filename string) *Metainfo {
 	metainfo := &Metainfo{}
 
 	// Required fields
+	if result["info"] != nil {
+		addInfoFields(metainfo, result["info"].(map[string]interface{}))
+	} else {
+		panic("MISSING REQUIRED FIELD: info")
+	}
+
 	if result["announce"] != nil {
 		metainfo.Announce = result["announce"].(string)
 	} else {
@@ -78,4 +92,49 @@ func NewMetainfo(filename string) *Metainfo {
 	}
 
 	return metainfo
+}
+
+func addInfoFields(metainfo *Metainfo, infoMap map[string]interface{}) {
+	info := &Info{}
+
+	if infoMap["piece length"] != nil {
+		info.PieceLength = infoMap["piece length"].(int)
+	} else {
+		panic("MISSING REQUIRED FIELD: piece length")
+	}
+
+	if infoMap["pieces"] != nil {
+		info.Pieces = infoMap["pieces"].(string)
+	} else {
+		panic("MISSING REQUIRED FIELD: pieces")
+	}
+
+	if infoMap["private"] != nil {
+		info.Private = infoMap["private"].(bool)
+	}
+
+	if infoMap["name"] != nil {
+		info.Name = infoMap["name"].(string)
+	} else {
+		panic("MISSING REQUIRED FIELD: name")
+	}
+
+	// Check whether single or multiple file mode
+	if infoMap["files"] != nil {
+		info.Mode = InfoModeMultiple
+	} else {
+		info.Mode = InfoModeSingle
+
+		if infoMap["length"] != nil {
+			info.Length = infoMap["length"].(int)
+		} else {
+			panic("MISSING REQUIRED FIELD: length")
+		}
+
+		if infoMap["md5sum"] != nil {
+			info.MD5Sum = infoMap["md5sum"].(string)
+		}
+	}
+
+	metainfo.Info = *info
 }
