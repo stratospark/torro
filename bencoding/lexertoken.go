@@ -4,7 +4,14 @@ import "fmt"
 
 type Token struct {
 	Type  TokenType
-	Value string
+	Value []byte
+}
+
+func NewToken(tokenType TokenType, val string) Token {
+	return Token{
+		Type:  tokenType,
+		Value: []byte(val),
+	}
 }
 
 type TokenType int
@@ -55,15 +62,15 @@ var TokenNames = map[TokenType]string{
 
 func (t Token) String() string {
 	maxLen := 40
-	value := t.Value
+	value := string(t.Value)
 	if len(t.Value) > maxLen {
-		value = t.Value[:maxLen] + "..."
+		value = value[:maxLen] + "..." + value[len(value)-10:]
 	}
 	output := fmt.Sprintf("[%s: %q]", TokenNames[t.Type], value)
 	return output
 }
 
-const EOF rune = 0
+//const EOF byte = -1
 
 const (
 	COLON         string = ":"

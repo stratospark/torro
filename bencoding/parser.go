@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/oleiade/lane"
 	"strconv"
+	"unicode/utf8"
 )
 
 type ContainerType int
@@ -17,7 +18,7 @@ const (
 
 type Container struct {
 	Type    ContainerType
-	BString string
+	BString []byte
 	Integer int
 	List    *[]Container
 	Dict    map[string]Container
@@ -26,7 +27,7 @@ type Container struct {
 func (c *Container) String() string {
 	switch c.Type {
 	case ContainerBString:
-		return c.BString
+		return string(c.BString)
 	case ContainerInteger:
 		return fmt.Sprint(c.Integer)
 	case ContainerList:
@@ -95,7 +96,7 @@ func (parser *Parser) CurrentType() TokenType {
 	return parser.Tokens[parser.Pos].Type
 }
 
-func (parser *Parser) CurrentValue() string {
+func (parser *Parser) CurrentValue() []byte {
 	return parser.Tokens[parser.Pos].Value
 }
 
@@ -204,7 +205,7 @@ func addToContainer(parser *Parser, c *Container, key string) {
 
 func parseBString(parser *Parser) ParseFn {
 	// Get Length
-	strLength, err := strconv.ParseInt(parser.CurrentValue(), 10, 64)
+	strLength, err := strconv.ParseInt(string(parser.CurrentValue()), 10, 64)
 	if err != nil {
 		panic("NOT A VALID STRING LENGTH")
 	}
@@ -212,7 +213,8 @@ func parseBString(parser *Parser) ParseFn {
 
 	// Get Colon
 	colon := parser.CurrentValue()
-	if colon != ":" {
+	r, _ := utf8.DecodeRune(colon)
+	if r != ':' {
 		panic("MISSING REQUIRED COLON")
 	}
 	parser.Pos++
@@ -223,7 +225,7 @@ func parseBString(parser *Parser) ParseFn {
 		panic("STRING LENGTH DOESNT MATCH")
 	}
 	parser.Pos++
-	addToContainer(parser, &Container{Type: ContainerBString, BString: strValue}, strValue)
+	addToContainer(parser, &Container{Type: ContainerBString, BString: strValue}, string(strValue))
 
 	return parseBegin
 }
@@ -232,7 +234,7 @@ func parseInteger(parser *Parser) ParseFn {
 	//parser.CurrentValue() == TOKEN_INTEGER_START
 	parser.Pos++
 
-	num, err := strconv.ParseInt(parser.CurrentValue(), 10, 64)
+	num, err := strconv.ParseInt(string(parser.CurrentValue()), 10, 64)
 	if err != nil {
 		panic("NOT A VALID INTEGER")
 	}

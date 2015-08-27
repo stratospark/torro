@@ -23,16 +23,6 @@ func main() {
 	lex := bencoding.BeginLexing(".torrent", torrentStr, bencoding.LexBegin)
 	tokens := bencoding.Collect(lex)
 
-	//	pretty.Print(output.Output)
-	tokenCounts := make(map[bencoding.Token]int)
-	for _, t := range tokens {
-		tokenCounts[t]++
-		fmt.Println(t)
-	}
-	//	fmt.Println(tokenCounts)
-
-	return
-
 	output := bencoding.Parse(tokens)
 	result := output.Output.(map[string]interface{})
 

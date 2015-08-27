@@ -11,7 +11,7 @@ import (
 
 type Lexer struct {
 	Name   string
-	Input  string
+	Input  []byte
 	Tokens chan Token
 	State  LexFn
 
@@ -58,25 +58,16 @@ type LexFn func(*Lexer) LexFn
 Backup to the beginning of the last read token.
 */
 func (lex *Lexer) Backup() {
-	lex.Pos -= lex.Width
+	//	lex.Pos -= lex.Width
+	lex.Pos--
 }
 
 /*
 Returns a slice of the current input from the current lexer
 start position to the current position.
 */
-func (lex *Lexer) CurrentInput() string {
+func (lex *Lexer) CurrentInput() []byte {
 	return lex.Input[lex.Start:lex.Pos]
-}
-
-/*
-Increment the position
-*/
-func (lex *Lexer) Inc() {
-	lex.Pos++
-	if lex.Pos >= utf8.RuneCountInString(lex.Input) {
-		lex.Emit(TOKEN_EOF)
-	}
 }
 
 /*
@@ -91,7 +82,8 @@ Puts a token on the token channel. The value of this
 token  is read from the input based on the current lexer position.
 */
 func (lex *Lexer) Emit(tokenType TokenType) {
-	lex.Tokens <- Token{Type: tokenType, Value: lex.Input[lex.Start:lex.Pos]}
+	token := Token{Type: tokenType, Value: lex.Input[lex.Start:lex.Pos]}
+	lex.Tokens <- token
 	lex.Start = lex.Pos
 }
 
@@ -101,7 +93,7 @@ Returns a token with error information.
 func (lex *Lexer) Errorf(format string, args ...interface{}) LexFn {
 	lex.Tokens <- Token{
 		Type:  TOKEN_ERROR,
-		Value: fmt.Sprintf(format, args...),
+		Value: []byte(fmt.Sprintf(format, args...)),
 	}
 	return nil
 }
@@ -118,7 +110,7 @@ func (lex *Lexer) Ignore() {
 Return a slice of the input from the current lexer position
 to the end of the input string.
 */
-func (lex *Lexer) InputToEnd() string {
+func (lex *Lexer) InputToEnd() []byte {
 	return lex.Input[lex.Pos:]
 }
 
@@ -130,28 +122,27 @@ func (lex *Lexer) IsEOF() bool {
 }
 
 /*
-Returns true/false if the next character is whitespace
-*/
-func (lex *Lexer) IsWhitespace() bool {
-	ch, _ := utf8.DecodeRuneInString(lex.Input[lex.Pos:])
-	return unicode.IsSpace(ch)
-}
-
-/*
 Reads the next rune (character) from the input stream
 and advances the lexer position.
 */
-func (lex *Lexer) Next() rune {
-	if lex.Pos >= utf8.RuneCountInString(lex.Input) {
-		lex.Width = 0
-		return EOF
-	}
-
-	result, width := utf8.DecodeRuneInString(lex.Input[lex.Pos:])
-
-	lex.Width = width
-	lex.Pos += lex.Width
-	return result
+//func (lex *Lexer) Next() rune {
+//	if lex.Pos >= utf8.RuneCountInString(lex.Input) {
+//		lex.Width = 0
+//		fmt.Println("               EOF                   ")
+//		return EOF
+//	}
+//
+//	result, width := utf8.DecodeRuneInString(lex.Input[lex.Pos:])
+//
+//	fmt.Println("NEXT: ", result, " WIDTH: ", width)
+//	lex.Width = width
+//	lex.Pos += lex.Width
+//	return result
+//}
+func (lex *Lexer) Next() byte {
+	next := lex.Input[lex.Pos : lex.Pos+1]
+	lex.Pos++
+	return next[0]
 }
 
 /*
@@ -174,7 +165,7 @@ func (lex *Lexer) NextToken() Token {
 Returns the next rune in the stream, then puts the lexer
 position back. Basically reads the next rune without consuming it.
 */
-func (lex *Lexer) Peek() rune {
+func (lex *Lexer) Peek() byte {
 	r := lex.Next()
 	lex.Backup()
 	return r
@@ -197,29 +188,10 @@ func (lex *Lexer) Shutdown() {
 	close(lex.Tokens)
 }
 
-/*
-Skips whitespace until we get something meaningful.
-*/
-func (lex *Lexer) SkipWhitespace() {
-	for {
-		ch := lex.Next()
-
-		if !unicode.IsSpace(ch) {
-			lex.Dec()
-			break
-		}
-
-		if ch == EOF {
-			lex.Emit(TOKEN_EOF)
-			break
-		}
-	}
-}
-
 func BeginLexing(name, input string, state LexFn) *Lexer {
 	l := &Lexer{
 		Name:        name,
-		Input:       input,
+		Input:       []byte(input),
 		State:       state,
 		Tokens:      make(chan Token, 3),
 		NestedStack: lane.NewStack(),
@@ -233,11 +205,19 @@ STATES
 */
 
 func LexBegin(lex *Lexer) LexFn {
-	next := lex.Peek()
+	// TODO: Make this EOF detection cleaner
+	var next byte
+	if lex.Pos >= len(lex.Input) {
+		next = ' '
+	} else {
+		next = lex.Peek()
+	}
+	r, _ := utf8.DecodeRune([]byte{next})
+
 	switch {
 	case next == 'i':
 		return LexIntegerStart
-	case unicode.IsDigit(next):
+	case unicode.IsDigit(r):
 		return LexStringStart
 	case next == 'l':
 		return LexListStart
@@ -266,13 +246,13 @@ func LexBegin(lex *Lexer) LexFn {
 
 func LexStringStart(lex *Lexer) LexFn {
 	for {
-		lex.Pos++
+		lex.Next()
 		if lex.IsEOF() {
 			return lex.Errorf(LexErrUnexpectedEOF)
 		}
 
-		if strings.HasPrefix(lex.InputToEnd(), COLON) {
-			n, err := strconv.ParseInt(lex.CurrentInput(), 10, 64)
+		if strings.HasPrefix(string(lex.InputToEnd()), COLON) {
+			n, err := strconv.ParseInt(string(lex.CurrentInput()), 10, 64)
 			if err != nil || n < 0 {
 				return lex.Errorf(LexErrInvalidStringLength)
 			}
@@ -284,14 +264,24 @@ func LexStringStart(lex *Lexer) LexFn {
 }
 
 func LexStringValue(lex *Lexer) LexFn {
-	lex.Pos++
+	lex.Next()
 	lex.Emit(TOKEN_COLON)
 
-	for i := 0; i < lex.StringLength; i++ {
+	startPos := lex.Pos
+
+	//	for i := 0; i < lex.StringLength; i++ {
+	for lex.Pos < startPos+lex.StringLength {
 		if lex.IsEOF() {
 			return lex.Errorf(LexErrUnexpectedEOF)
 		}
-		lex.Pos++
+		lex.Next()
+		//		next := lex.Next()
+		//		if next == EOF {
+		//			return lex.Errorf(LexErrUnexpectedEOF)
+		//		}
+
+		//		fmt.Println(next)
+		//		lex.Pos++
 	}
 
 	lex.Emit(TOKEN_STRING_VALUE)
@@ -308,13 +298,14 @@ func LexIntegerStart(lex *Lexer) LexFn {
 func LexIntegerValue(lex *Lexer) LexFn {
 	for {
 		next := lex.Peek()
-		if unicode.IsDigit(next) || next == '-' {
+		r, _ := utf8.DecodeRune([]byte{next})
+		if unicode.IsDigit(r) || next == '-' {
 			lex.Pos++
 		} else {
 			return lex.Errorf(LexErrInvalidCharacter)
 		}
 
-		if strings.HasPrefix(lex.InputToEnd(), INTEGER_END) {
+		if strings.HasPrefix(string(lex.InputToEnd()), INTEGER_END) {
 			lex.Emit(TOKEN_INTEGER_VALUE)
 			return LexIntegerEnd
 		}

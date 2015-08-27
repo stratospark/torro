@@ -13,14 +13,14 @@ type LexTest struct {
 }
 
 var (
-	tColon        = Token{TOKEN_COLON, ":"}
-	tIntegerStart = Token{TOKEN_INTEGER_START, "i"}
-	tIntegerEnd   = Token{TOKEN_INTEGER_END, "e"}
-	tListStart    = Token{TOKEN_LIST_START, "l"}
-	tListEnd      = Token{TOKEN_LIST_END, "e"}
-	tDictStart    = Token{TOKEN_DICT_START, "d"}
-	tDictEnd      = Token{TOKEN_DICT_END, "e"}
-	tEOF          = Token{TOKEN_EOF, ""}
+	tColon        = Token{TOKEN_COLON, []byte{':'}}
+	tIntegerStart = Token{TOKEN_INTEGER_START, []byte{'i'}}
+	tIntegerEnd   = Token{TOKEN_INTEGER_END, []byte{'e'}}
+	tListStart    = Token{TOKEN_LIST_START, []byte{'l'}}
+	tListEnd      = Token{TOKEN_LIST_END, []byte{'e'}}
+	tDictStart    = Token{TOKEN_DICT_START, []byte{'d'}}
+	tDictEnd      = Token{TOKEN_DICT_END, []byte{'e'}}
+	tEOF          = Token{TOKEN_EOF, []byte{}}
 )
 
 func checkLexTests(tests []LexTest) {
@@ -36,42 +36,42 @@ func checkLexTests(tests []LexTest) {
 func TestStringLexing(t *testing.T) {
 	validTests := []LexTest{
 		LexTest{"4:spam", LexBegin, []Token{
-			Token{TOKEN_STRING_LENGTH, "4"},
+			NewToken(TOKEN_STRING_LENGTH, "4"),
 			tColon,
-			Token{TOKEN_STRING_VALUE, "spam"},
+			NewToken(TOKEN_STRING_VALUE, "spam"),
 			tEOF,
 		}},
 		LexTest{"0:", LexBegin, []Token{
-			Token{TOKEN_STRING_LENGTH, "0"},
+			NewToken(TOKEN_STRING_LENGTH, "0"),
 			tColon,
-			Token{TOKEN_STRING_VALUE, ""},
+			NewToken(TOKEN_STRING_VALUE, ""),
 			tEOF,
 		}},
 		LexTest{"1::", LexBegin, []Token{
-			Token{TOKEN_STRING_LENGTH, "1"},
+			NewToken(TOKEN_STRING_LENGTH, "1"),
 			tColon,
-			Token{TOKEN_STRING_VALUE, ":"},
+			NewToken(TOKEN_STRING_VALUE, ":"),
 			tEOF,
 		}},
 	}
 
 	invalidTests := []LexTest{
 		LexTest{"-1:a", LexBegin, []Token{
-			Token{TOKEN_ERROR, LexErrInvalidCharacter},
+			NewToken(TOKEN_ERROR, LexErrInvalidCharacter),
 		}},
 		LexTest{"1.4:aa", LexBegin, []Token{
-			Token{TOKEN_ERROR, LexErrInvalidStringLength},
+			NewToken(TOKEN_ERROR, LexErrInvalidStringLength),
 		}},
 		LexTest{"5:asdf", LexBegin, []Token{
-			Token{TOKEN_STRING_LENGTH, "5"},
+			NewToken(TOKEN_STRING_LENGTH, "5"),
 			tColon,
-			Token{TOKEN_ERROR, LexErrUnexpectedEOF},
+			NewToken(TOKEN_ERROR, LexErrUnexpectedEOF),
 		}},
 		LexTest{"5asdfg", LexBegin, []Token{
-			Token{TOKEN_ERROR, LexErrUnexpectedEOF},
+			NewToken(TOKEN_ERROR, LexErrUnexpectedEOF),
 		}},
 		LexTest{"5", LexBegin, []Token{
-			Token{TOKEN_ERROR, LexErrUnexpectedEOF},
+			NewToken(TOKEN_ERROR, LexErrUnexpectedEOF),
 		}},
 	}
 
@@ -89,25 +89,25 @@ func TestIntegerLexing(t *testing.T) {
 	validTests := []LexTest{
 		LexTest{"i3e", LexBegin, []Token{
 			tIntegerStart,
-			Token{TOKEN_INTEGER_VALUE, "3"},
+			NewToken(TOKEN_INTEGER_VALUE, "3"),
 			tIntegerEnd,
 			tEOF,
 		}},
 		LexTest{"i10e", LexBegin, []Token{
 			tIntegerStart,
-			Token{TOKEN_INTEGER_VALUE, "10"},
+			NewToken(TOKEN_INTEGER_VALUE, "10"),
 			tIntegerEnd,
 			tEOF,
 		}},
 		LexTest{"i-1e", LexBegin, []Token{
 			tIntegerStart,
-			Token{TOKEN_INTEGER_VALUE, "-1"},
+			NewToken(TOKEN_INTEGER_VALUE, "-1"),
 			tIntegerEnd,
 			tEOF,
 		}},
 		LexTest{"i0e", LexBegin, []Token{
 			tIntegerStart,
-			Token{TOKEN_INTEGER_VALUE, "0"},
+			NewToken(TOKEN_INTEGER_VALUE, "0"),
 			tIntegerEnd,
 			tEOF,
 		}},
@@ -116,19 +116,19 @@ func TestIntegerLexing(t *testing.T) {
 	invalidTests := []LexTest{
 		LexTest{"iae", LexBegin, []Token{
 			tIntegerStart,
-			Token{TOKEN_ERROR, LexErrInvalidCharacter},
+			NewToken(TOKEN_ERROR, LexErrInvalidCharacter),
 		}},
 		LexTest{"i10", LexBegin, []Token{
 			tIntegerStart,
-			Token{TOKEN_ERROR, LexErrUnexpectedEOF},
+			NewToken(TOKEN_ERROR, LexErrUnexpectedEOF),
 		}},
 		LexTest{"ie", LexBegin, []Token{
 			tIntegerStart,
-			Token{TOKEN_ERROR, LexErrInvalidCharacter},
+			NewToken(TOKEN_ERROR, LexErrInvalidCharacter),
 		}},
 		LexTest{"i1.1e", LexBegin, []Token{
 			tIntegerStart,
-			Token{TOKEN_ERROR, LexErrInvalidCharacter},
+			NewToken(TOKEN_ERROR, LexErrInvalidCharacter),
 		}},
 	}
 
@@ -146,12 +146,12 @@ func TestListLexing(t *testing.T) {
 	validTests := []LexTest{
 		LexTest{"l4:spam4:eggse", LexBegin, []Token{
 			tListStart,
-			Token{TOKEN_STRING_LENGTH, "4"},
+			NewToken(TOKEN_STRING_LENGTH, "4"),
 			tColon,
-			Token{TOKEN_STRING_VALUE, "spam"},
-			Token{TOKEN_STRING_LENGTH, "4"},
+			NewToken(TOKEN_STRING_VALUE, "spam"),
+			NewToken(TOKEN_STRING_LENGTH, "4"),
 			tColon,
-			Token{TOKEN_STRING_VALUE, "eggs"},
+			NewToken(TOKEN_STRING_VALUE, "eggs"),
 			tListEnd,
 			tEOF,
 		}},
@@ -163,28 +163,28 @@ func TestListLexing(t *testing.T) {
 		LexTest{"li10ei-1ee", LexBegin, []Token{
 			tListStart,
 			tIntegerStart,
-			Token{TOKEN_INTEGER_VALUE, "10"},
+			NewToken(TOKEN_INTEGER_VALUE, "10"),
 			tIntegerEnd,
 			tIntegerStart,
-			Token{TOKEN_INTEGER_VALUE, "-1"},
+			NewToken(TOKEN_INTEGER_VALUE, "-1"),
 			tIntegerEnd,
 			tListEnd,
 			tEOF,
 		}},
 		LexTest{"l4:thisi10el4:thati-1eee", LexBegin, []Token{
 			tListStart,
-			Token{TOKEN_STRING_LENGTH, "4"},
+			NewToken(TOKEN_STRING_LENGTH, "4"),
 			tColon,
-			Token{TOKEN_STRING_VALUE, "this"},
+			NewToken(TOKEN_STRING_VALUE, "this"),
 			tIntegerStart,
-			Token{TOKEN_INTEGER_VALUE, "10"},
+			NewToken(TOKEN_INTEGER_VALUE, "10"),
 			tIntegerEnd,
 			tListStart,
-			Token{TOKEN_STRING_LENGTH, "4"},
+			NewToken(TOKEN_STRING_LENGTH, "4"),
 			tColon,
-			Token{TOKEN_STRING_VALUE, "that"},
+			NewToken(TOKEN_STRING_VALUE, "that"),
 			tIntegerStart,
-			Token{TOKEN_INTEGER_VALUE, "-1"},
+			NewToken(TOKEN_INTEGER_VALUE, "-1"),
 			tIntegerEnd,
 			tListEnd,
 			tListEnd,
@@ -204,20 +204,20 @@ func TestListLexing(t *testing.T) {
 	invalidTests := []LexTest{
 		LexTest{"l", LexBegin, []Token{
 			tListStart,
-			Token{TOKEN_ERROR, LexErrUnclosedDelimeter},
+			NewToken(TOKEN_ERROR, LexErrUnclosedDelimeter),
 		}},
 		LexTest{"lle", LexBegin, []Token{
 			tListStart,
 			tListStart,
 			tListEnd,
-			Token{TOKEN_ERROR, LexErrUnclosedDelimeter},
+			NewToken(TOKEN_ERROR, LexErrUnclosedDelimeter),
 		}},
 		LexTest{"lleee", LexBegin, []Token{
 			tListStart,
 			tListStart,
 			tListEnd,
 			tListEnd,
-			Token{TOKEN_ERROR, LexErrInvalidCharacter},
+			NewToken(TOKEN_ERROR, LexErrInvalidCharacter),
 		}},
 	}
 
@@ -235,57 +235,90 @@ func TestDictLexing(t *testing.T) {
 	validTests := []LexTest{
 		LexTest{"d3:cow3:moo4:spam4:eggse", LexBegin, []Token{
 			tDictStart,
-			Token{TOKEN_STRING_LENGTH, "3"},
+			NewToken(TOKEN_STRING_LENGTH, "3"),
 			tColon,
-			Token{TOKEN_STRING_VALUE, "cow"},
-			Token{TOKEN_STRING_LENGTH, "3"},
+			NewToken(TOKEN_STRING_VALUE, "cow"),
+			NewToken(TOKEN_STRING_LENGTH, "3"),
 			tColon,
-			Token{TOKEN_STRING_VALUE, "moo"},
-			Token{TOKEN_STRING_LENGTH, "4"},
+			NewToken(TOKEN_STRING_VALUE, "moo"),
+			NewToken(TOKEN_STRING_LENGTH, "4"),
 			tColon,
-			Token{TOKEN_STRING_VALUE, "spam"},
-			Token{TOKEN_STRING_LENGTH, "4"},
+			NewToken(TOKEN_STRING_VALUE, "spam"),
+			NewToken(TOKEN_STRING_LENGTH, "4"),
 			tColon,
-			Token{TOKEN_STRING_VALUE, "eggs"},
+			NewToken(TOKEN_STRING_VALUE, "eggs"),
 			tDictEnd,
 			tEOF,
 		}},
 		LexTest{"d4:spaml1:a1:bee", LexBegin, []Token{
 			tDictStart,
-			Token{TOKEN_STRING_LENGTH, "4"},
+			NewToken(TOKEN_STRING_LENGTH, "4"),
 			tColon,
-			Token{TOKEN_STRING_VALUE, "spam"},
+			NewToken(TOKEN_STRING_VALUE, "spam"),
 			tListStart,
-			Token{TOKEN_STRING_LENGTH, "1"},
+			NewToken(TOKEN_STRING_LENGTH, "1"),
 			tColon,
-			Token{TOKEN_STRING_VALUE, "a"},
-			Token{TOKEN_STRING_LENGTH, "1"},
+			NewToken(TOKEN_STRING_VALUE, "a"),
+			NewToken(TOKEN_STRING_LENGTH, "1"),
 			tColon,
-			Token{TOKEN_STRING_VALUE, "b"},
+			NewToken(TOKEN_STRING_VALUE, "b"),
 			tListEnd,
 			tDictEnd,
 			tEOF,
 		}},
 		LexTest{"d9:publisher3:bob17:publisher-webpage15:www.example.com18:publisher.location4:homee", LexBegin, []Token{
 			tDictStart,
-			Token{TOKEN_STRING_LENGTH, "9"},
+			NewToken(TOKEN_STRING_LENGTH, "9"),
 			tColon,
-			Token{TOKEN_STRING_VALUE, "publisher"},
-			Token{TOKEN_STRING_LENGTH, "3"},
+			NewToken(TOKEN_STRING_VALUE, "publisher"),
+			NewToken(TOKEN_STRING_LENGTH, "3"),
 			tColon,
-			Token{TOKEN_STRING_VALUE, "bob"},
-			Token{TOKEN_STRING_LENGTH, "17"},
+			NewToken(TOKEN_STRING_VALUE, "bob"),
+			NewToken(TOKEN_STRING_LENGTH, "17"),
 			tColon,
-			Token{TOKEN_STRING_VALUE, "publisher-webpage"},
-			Token{TOKEN_STRING_LENGTH, "15"},
+			NewToken(TOKEN_STRING_VALUE, "publisher-webpage"),
+			NewToken(TOKEN_STRING_LENGTH, "15"),
 			tColon,
-			Token{TOKEN_STRING_VALUE, "www.example.com"},
-			Token{TOKEN_STRING_LENGTH, "18"},
+			NewToken(TOKEN_STRING_VALUE, "www.example.com"),
+			NewToken(TOKEN_STRING_LENGTH, "18"),
 			tColon,
-			Token{TOKEN_STRING_VALUE, "publisher.location"},
-			Token{TOKEN_STRING_LENGTH, "4"},
+			NewToken(TOKEN_STRING_VALUE, "publisher.location"),
+			NewToken(TOKEN_STRING_LENGTH, "4"),
 			tColon,
-			Token{TOKEN_STRING_VALUE, "home"},
+			NewToken(TOKEN_STRING_VALUE, "home"),
+			tDictEnd,
+			tEOF,
+		}},
+		LexTest{"d3:key3:val4:infod6:pieces4:blah4:dictdee6:locale2:ene", LexBegin, []Token{
+			tDictStart,
+			NewToken(TOKEN_STRING_LENGTH, "3"),
+			tColon,
+			NewToken(TOKEN_STRING_VALUE, "key"),
+			NewToken(TOKEN_STRING_LENGTH, "3"),
+			tColon,
+			NewToken(TOKEN_STRING_VALUE, "val"),
+			NewToken(TOKEN_STRING_LENGTH, "4"),
+			tColon,
+			NewToken(TOKEN_STRING_VALUE, "info"),
+			tDictStart,
+			NewToken(TOKEN_STRING_LENGTH, "6"),
+			tColon,
+			NewToken(TOKEN_STRING_VALUE, "pieces"),
+			NewToken(TOKEN_STRING_LENGTH, "4"),
+			tColon,
+			NewToken(TOKEN_STRING_VALUE, "blah"),
+			NewToken(TOKEN_STRING_LENGTH, "4"),
+			tColon,
+			NewToken(TOKEN_STRING_VALUE, "dict"),
+			tDictStart,
+			tDictEnd,
+			tDictEnd,
+			NewToken(TOKEN_STRING_LENGTH, "6"),
+			tColon,
+			NewToken(TOKEN_STRING_VALUE, "locale"),
+			NewToken(TOKEN_STRING_LENGTH, "2"),
+			tColon,
+			NewToken(TOKEN_STRING_VALUE, "en"),
 			tDictEnd,
 			tEOF,
 		}},
@@ -299,12 +332,12 @@ func TestDictLexing(t *testing.T) {
 	invalidTests := []LexTest{
 		LexTest{"d", LexBegin, []Token{
 			tDictStart,
-			Token{TOKEN_ERROR, LexErrUnclosedDelimeter},
+			NewToken(TOKEN_ERROR, LexErrUnclosedDelimeter),
 		}},
 		LexTest{"dee", LexBegin, []Token{
 			tDictStart,
 			tDictEnd,
-			Token{TOKEN_ERROR, LexErrInvalidCharacter},
+			NewToken(TOKEN_ERROR, LexErrInvalidCharacter),
 		}},
 	}
 
