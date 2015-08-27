@@ -28,9 +28,22 @@ func checkLexTests(tests []LexTest) {
 		Convey(fmt.Sprintf("%s", test.Input), func() {
 			lex := BeginLexing(".torrent", test.Input, test.StartState)
 			results := collect(lex)
+			lex.Shutdown()
 			So(results, ShouldResemble, test.Result)
 		})
 	}
+}
+
+func TestLexer(t *testing.T) {
+	Convey("Creating a basic Lexer", t, func() {
+		lex := &Lexer{}
+		So(*lex, ShouldNotBeNil)
+		So(lex.String(), ShouldContainSubstring, "Name")
+		So(lex.String(), ShouldContainSubstring, "Input")
+		So(lex.String(), ShouldContainSubstring, "Start")
+		So(lex.String(), ShouldContainSubstring, "Pos")
+		So(lex.String(), ShouldContainSubstring, "Width")
+	})
 }
 
 func TestStringLexing(t *testing.T) {

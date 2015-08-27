@@ -71,13 +71,6 @@ func (lex *Lexer) CurrentInput() []byte {
 }
 
 /*
-Decrement the position
-*/
-func (lex *Lexer) Dec() {
-	lex.Pos--
-}
-
-/*
 Puts a token on the token channel. The value of this
 token  is read from the input based on the current lexer position.
 */
@@ -99,14 +92,6 @@ func (lex *Lexer) Errorf(format string, args ...interface{}) LexFn {
 }
 
 /*
-Ignores the current token by setting the lexer's start position
-to the current reading position.
-*/
-func (lex *Lexer) Ignore() {
-	lex.Start = lex.Pos
-}
-
-/*
 Return a slice of the input from the current lexer position
 to the end of the input string.
 */
@@ -122,23 +107,9 @@ func (lex *Lexer) IsEOF() bool {
 }
 
 /*
-Reads the next rune (character) from the input stream
-and advances the lexer position.
+Reads the next byte from the input and then advances
+the lexer position.
 */
-//func (lex *Lexer) Next() rune {
-//	if lex.Pos >= utf8.RuneCountInString(lex.Input) {
-//		lex.Width = 0
-//		fmt.Println("               EOF                   ")
-//		return EOF
-//	}
-//
-//	result, width := utf8.DecodeRuneInString(lex.Input[lex.Pos:])
-//
-//	fmt.Println("NEXT: ", result, " WIDTH: ", width)
-//	lex.Width = width
-//	lex.Pos += lex.Width
-//	return result
-//}
 func (lex *Lexer) Next() byte {
 	next := lex.Input[lex.Pos : lex.Pos+1]
 	lex.Pos++
@@ -158,7 +129,6 @@ func (lex *Lexer) NextToken() Token {
 
 		}
 	}
-	panic("Lexer.NextToken reached an invalid state!")
 }
 
 /*
@@ -169,16 +139,6 @@ func (lex *Lexer) Peek() byte {
 	r := lex.Next()
 	lex.Backup()
 	return r
-}
-
-/*
-Starts the lexical analysis and feeding tokens into the token channel
-*/
-func (lex *Lexer) Run() {
-	for state := LexBegin; state != nil; {
-		state = state(lex)
-	}
-	lex.Shutdown()
 }
 
 /*
@@ -240,8 +200,6 @@ func LexBegin(lex *Lexer) LexFn {
 
 		return lex.Errorf("done")
 	}
-
-	panic("Shouldn't get here")
 }
 
 func LexStringStart(lex *Lexer) LexFn {
@@ -269,19 +227,11 @@ func LexStringValue(lex *Lexer) LexFn {
 
 	startPos := lex.Pos
 
-	//	for i := 0; i < lex.StringLength; i++ {
 	for lex.Pos < startPos+lex.StringLength {
 		if lex.IsEOF() {
 			return lex.Errorf(LexErrUnexpectedEOF)
 		}
 		lex.Next()
-		//		next := lex.Next()
-		//		if next == EOF {
-		//			return lex.Errorf(LexErrUnexpectedEOF)
-		//		}
-
-		//		fmt.Println(next)
-		//		lex.Pos++
 	}
 
 	lex.Emit(TOKEN_STRING_VALUE)
