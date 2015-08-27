@@ -52,6 +52,39 @@ func collect(lex *Lexer) (tokens []Token) {
 
 var Collect = collect
 
+/*
+Get the raw bencoded info dictionary value. This is a bit
+of a hack, as it requires two passes through the tokens to
+get the original data. A better approach may have been to
+have the Lexer record the corresponding position and values
+of every token have the parser be able to build up the
+original representation of a parsed structure.
+*/
+func GetBencodedInfo(tokens []Token) []byte {
+	startInfo, endInfo := 0, 0
+	infoBytes := make([]byte, 0)
+
+	dictStack := lane.NewStack()
+	for i, token := range tokens {
+		if token.Type == TOKEN_DICT_START {
+			dictStack.Push(i)
+		} else if token.Type == TOKEN_DICT_END {
+			dictStack.Pop()
+			if dictStack.Size() == 1 && endInfo == 0 {
+				endInfo = i - 1
+			}
+		}
+		if startInfo == 0 && string(tokens[i+3].Value) == "info" && dictStack.Size() == 1 {
+			startInfo = i + 3
+		}
+		if startInfo > 0 && i > startInfo && endInfo == 0 {
+			infoBytes = append(infoBytes, token.Value...)
+		}
+	}
+
+	return infoBytes
+}
+
 type LexFn func(*Lexer) LexFn
 
 /*

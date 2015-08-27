@@ -20,6 +20,7 @@ func main() {
 
 	}
 
+	fmt.Println("\n\n\n")
 	fmt.Println("Parsing: ", filename)
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -29,6 +30,9 @@ func main() {
 	torrentStr := string(data)
 	lex := bencoding.BeginLexing(".torrent", torrentStr, bencoding.LexBegin)
 	tokens := bencoding.Collect(lex)
+
+	fmt.Println("Bencoded info value")
+	fmt.Println(string(bencoding.GetBencodedInfo(tokens)))
 
 	output := bencoding.Parse(tokens)
 	result := output.Output.(map[string]interface{})
@@ -62,28 +66,28 @@ func main() {
 	pretty.Println("Info/md5sum:", info["md5sum"])
 	//	pretty.Println("Info/files:", info["files"])
 
-	if info["files"] != nil {
-		files := info["files"].([]interface{})
-		for i, val := range files {
-			//		pretty.Println(i, ": ", val)
-			pretty.Println("\n\n", i)
-			file := val.(map[string]interface{})
-			for key, val2 := range file {
-				switch val2.(type) {
-				case int:
-					pretty.Println(key, ": ", val2)
-				case []uint8:
-					pretty.Println(key, ": ", conv(val2))
-				case []interface{}:
-					path := val2.([]interface{})
-					pretty.Println("Paths:")
-					for _, val3 := range path {
-						pretty.Println("\t\t", conv(val3))
-					}
-				default:
-					pretty.Println(key, ": ", val2)
-				}
-			}
-		}
-	}
+	//	if info["files"] != nil {
+	//		files := info["files"].([]interface{})
+	//		for i, val := range files {
+	//			//		pretty.Println(i, ": ", val)
+	//			pretty.Println("\n\n", i)
+	//			file := val.(map[string]interface{})
+	//			for key, val2 := range file {
+	//				switch val2.(type) {
+	//				case int:
+	//					pretty.Println(key, ": ", val2)
+	//				case []uint8:
+	//					pretty.Println(key, ": ", conv(val2))
+	//				case []interface{}:
+	//					path := val2.([]interface{})
+	//					pretty.Println("Paths:")
+	//					for _, val3 := range path {
+	//						pretty.Println("\t\t", conv(val3))
+	//					}
+	//				default:
+	//					pretty.Println(key, ": ", val2)
+	//				}
+	//			}
+	//		}
+	//	}
 }

@@ -363,3 +363,25 @@ func TestDictLexing(t *testing.T) {
 	})
 
 }
+
+func TestGetBencodedInfo(t *testing.T) {
+	Convey("Returns the original bencoded info dictionary from tokens", t, func() {
+		Convey("Using artifical data", func() {
+			input := "d4:infod3:keyd1:x1:yeed1:a1:bee"
+			lex := BeginLexing(".torrent", input, LexBegin)
+			tokens := collect(lex)
+			lex.Shutdown()
+			info := GetBencodedInfo(tokens)
+			So(info, ShouldResemble, []byte("d3:keyd1:x1:ye"))
+		})
+
+		Convey("Using data extracted from torrent file", func() {
+			input := "d8:announce39:http://torrent.ubuntu.com:6969/announce13:announce-listll39:http://torrent.ubuntu.com:6969/announceel44:http://ipv6.torrent.ubuntu.com:6969/announceee7:comment29:Ubuntu CD releases.ubuntu.com13:creation datei1406245935e4:infod6:lengthi1028653056e4:name32:ubuntu-14.04.1-desktop-amd64.iso12:piece lengthi524288eee"
+			lex := BeginLexing(".torrent", input, LexBegin)
+			tokens := collect(lex)
+			lex.Shutdown()
+			info := GetBencodedInfo(tokens)
+			So(info, ShouldResemble, []byte("d6:lengthi1028653056e4:name32:ubuntu-14.04.1-desktop-amd64.iso12:piece lengthi524288e"))
+		})
+	})
+}
