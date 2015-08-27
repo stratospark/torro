@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func xTestMetainfo(t *testing.T) {
+func TestMetainfo(t *testing.T) {
 
 	Convey("Should properly serialize torrent file into Metainfo structure", t, func() {
 

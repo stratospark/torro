@@ -4,6 +4,7 @@ import (
 	"github.com/stratospark/torro/bencoding"
 	"io/ioutil"
 	"time"
+	"fmt"
 )
 
 type File struct {
@@ -63,7 +64,8 @@ func NewMetainfo(filename string) *Metainfo {
 	}
 
 	if result["announce"] != nil {
-		metainfo.Announce = result["announce"].(string)
+		b, _ := result["announce"].([]uint8)
+		metainfo.Announce = string(b)
 	} else {
 		panic("MISSING REQUIRED FIELD: announce")
 	}
@@ -79,16 +81,20 @@ func NewMetainfo(filename string) *Metainfo {
 		metainfo.CreationDate = t
 	}
 
+
 	if result["comment"] != nil {
-		metainfo.Comment = result["comment"].(string)
+		b, _ := result["comment"].([]uint8)
+		metainfo.Comment = string(b)
 	}
 
 	if result["created by"] != nil {
-		metainfo.CreatedBy = result["created by"].(string)
+		b, _ := result["created by"].([]uint8)
+		metainfo.CreatedBy = string(b)
 	}
 
 	if result["encoding"] != nil {
-		metainfo.Encoding = result["encoding"].(string)
+		b, _ := result["encoding"].([]uint8)
+		metainfo.Encoding = string(b)
 	}
 
 	return metainfo
@@ -103,8 +109,11 @@ func addInfoFields(metainfo *Metainfo, infoMap map[string]interface{}) {
 		panic("MISSING REQUIRED FIELD: piece length")
 	}
 
+	fmt.Println("ok")
+
 	if infoMap["pieces"] != nil {
-		info.Pieces = infoMap["pieces"].(string)
+		b, _ := infoMap["pieces"].([]uint8)
+		info.Pieces = string(b)
 	} else {
 		panic("MISSING REQUIRED FIELD: pieces")
 	}
@@ -114,7 +123,8 @@ func addInfoFields(metainfo *Metainfo, infoMap map[string]interface{}) {
 	}
 
 	if infoMap["name"] != nil {
-		info.Name = infoMap["name"].(string)
+		b, _ := infoMap["name"].([]uint8)
+		info.Name = string(b)
 	} else {
 		panic("MISSING REQUIRED FIELD: name")
 	}
@@ -132,7 +142,8 @@ func addInfoFields(metainfo *Metainfo, infoMap map[string]interface{}) {
 		}
 
 		if infoMap["md5sum"] != nil {
-			info.MD5Sum = infoMap["md5sum"].(string)
+			b, _ := infoMap["md5sum"].([]uint8)
+			info.MD5Sum = string(b)
 		}
 	}
 
