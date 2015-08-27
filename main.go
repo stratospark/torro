@@ -6,13 +6,20 @@ import (
 	"github.com/stratospark/torro/bencoding"
 	"io/ioutil"
 	"time"
+	"os"
 )
 
 func main() {
 	println("TORRO!")
 
-//	filename := "testfiles/ubuntu.torrent"
-	filename := "testfiles/TheInternetsOwnBoyTheStoryOfAaronSwartz_archive.torrent"
+	var filename string
+	if len(os.Args) > 1 {
+		filename = os.Args[1]
+	} else {
+		filename = "testfiles/TheInternetsOwnBoyTheStoryOfAaronSwartz_archive.torrent"
+
+	}
+
 	fmt.Println("Parsing: ", filename)
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
