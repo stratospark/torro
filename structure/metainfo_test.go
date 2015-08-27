@@ -27,6 +27,8 @@ func TestMetainfo(t *testing.T) {
 
 			So(metainfo.Info.Name, ShouldEqual, "ubuntu-14.04.1-desktop-amd64.iso")
 			So(metainfo.Info.Length, ShouldEqual, 1028653056)
+
+			So(metainfo.Info.Files, ShouldBeNil)
 		})
 	})
 }

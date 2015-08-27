@@ -11,7 +11,7 @@ import (
 func main() {
 	println("TORRO!")
 
-	//	filename := "testfiles/ubuntu.torrent"
+//	filename := "testfiles/ubuntu.torrent"
 	filename := "testfiles/TheInternetsOwnBoyTheStoryOfAaronSwartz_archive.torrent"
 	fmt.Println("Parsing: ", filename)
 	data, err := ioutil.ReadFile(filename)
@@ -46,12 +46,37 @@ func main() {
 	pretty.Println("Info Piece Length:", info["piece length"])
 	pretty.Println("Info Private:", info["private"])
 
-	pretty.Println("Info/Name:", info["name"])
+	pretty.Println("Info/Name:", conv(info["name"]))
 	pretty.Println("Info/piece length:", info["piece length"])
 	pretty.Println("Info/pieces:", len(conv(info["pieces"])))
 	pretty.Println("Info/pieces/20:", len(conv(info["pieces"]))/20)
 	//	pretty.Println("Info/pieces:", info["pieces"].(string)[:4])
 	pretty.Println("Info/Length:", info["length"])
 	pretty.Println("Info/md5sum:", info["md5sum"])
-	pretty.Println("Info/files:", info["files"])
+//	pretty.Println("Info/files:", info["files"])
+
+	if info["files"] != nil {
+		files := info["files"].([]interface{})
+		for i, val := range files {
+			//		pretty.Println(i, ": ", val)
+			pretty.Println("\n\n", i)
+			file := val.(map[string]interface{})
+			for key, val2 := range file {
+				switch val2.(type) {
+				case int:
+					pretty.Println(key, ": ", val2)
+				case []uint8:
+					pretty.Println(key, ": ", conv(val2))
+				case []interface{}:
+					path := val2.([]interface{})
+					pretty.Println("Paths:")
+					for _, val3 := range path {
+						pretty.Println("\t\t", conv(val3))
+					}
+				default:
+					pretty.Println(key, ": ", val2)
+				}
+			}
+		}
+	}
 }

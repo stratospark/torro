@@ -41,6 +41,37 @@ type Metainfo struct {
 	Encoding     string
 }
 
+func addStringField(s *string, val interface{}, required bool) {
+		if val != nil {
+			b, _ := val.([]uint8)
+			*s = string(b)
+		} else {
+			if required {
+				panic("MISSING REQUIRED FIELD: announce")
+			}
+		}
+}
+
+func addIntField(s *int, val interface{}, required bool) {
+		if val != nil {
+			*s = val.(int)
+		} else {
+			if required {
+				panic("MISSING REQUIRED FIELD: announce")
+			}
+		}
+}
+
+func addBoolField(s *bool, val interface{}, required bool) {
+	if val != nil {
+		*s = val.(bool)
+	} else {
+		if required {
+			panic("MISSING REQUIRED FIELD: announce")
+		}
+	}
+}
+
 func NewMetainfo(filename string) *Metainfo {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -63,12 +94,7 @@ func NewMetainfo(filename string) *Metainfo {
 		panic("MISSING REQUIRED FIELD: info")
 	}
 
-	if result["announce"] != nil {
-		b, _ := result["announce"].([]uint8)
-		metainfo.Announce = string(b)
-	} else {
-		panic("MISSING REQUIRED FIELD: announce")
-	}
+	addStringField(&metainfo.Announce, result["announce"], true)
 
 	// Optional fields
 	if result["announce-list"] != nil {
@@ -81,21 +107,9 @@ func NewMetainfo(filename string) *Metainfo {
 		metainfo.CreationDate = t
 	}
 
-
-	if result["comment"] != nil {
-		b, _ := result["comment"].([]uint8)
-		metainfo.Comment = string(b)
-	}
-
-	if result["created by"] != nil {
-		b, _ := result["created by"].([]uint8)
-		metainfo.CreatedBy = string(b)
-	}
-
-	if result["encoding"] != nil {
-		b, _ := result["encoding"].([]uint8)
-		metainfo.Encoding = string(b)
-	}
+	addStringField(&metainfo.Comment, result["comment"], false)
+	addStringField(&metainfo.CreatedBy, result["created by"], false)
+	addStringField(&metainfo.Encoding, result["encoding"], false)
 
 	return metainfo
 }
@@ -103,48 +117,24 @@ func NewMetainfo(filename string) *Metainfo {
 func addInfoFields(metainfo *Metainfo, infoMap map[string]interface{}) {
 	info := &Info{}
 
-	if infoMap["piece length"] != nil {
-		info.PieceLength = infoMap["piece length"].(int)
-	} else {
-		panic("MISSING REQUIRED FIELD: piece length")
-	}
+	addIntField(&info.PieceLength, infoMap["piece length"], true)
 
-	fmt.Println("ok")
-
-	if infoMap["pieces"] != nil {
-		b, _ := infoMap["pieces"].([]uint8)
-		info.Pieces = string(b)
-	} else {
-		panic("MISSING REQUIRED FIELD: pieces")
-	}
-
-	if infoMap["private"] != nil {
-		info.Private = infoMap["private"].(bool)
-	}
-
-	if infoMap["name"] != nil {
-		b, _ := infoMap["name"].([]uint8)
-		info.Name = string(b)
-	} else {
-		panic("MISSING REQUIRED FIELD: name")
-	}
+	// TODO: may need to keep this as byte array?
+	addStringField(&info.Pieces, infoMap["pieces"], true)
+	addBoolField(&info.Private, infoMap["private"], false)
+	addStringField(&info.Name, infoMap["name"], true)
 
 	// Check whether single or multiple file mode
 	if infoMap["files"] != nil {
 		info.Mode = InfoModeMultiple
+		files := infoMap["files"].(map[string]interface{})
+		for _, file := range files {
+			fmt.Println(file)
+		}
 	} else {
 		info.Mode = InfoModeSingle
-
-		if infoMap["length"] != nil {
-			info.Length = infoMap["length"].(int)
-		} else {
-			panic("MISSING REQUIRED FIELD: length")
-		}
-
-		if infoMap["md5sum"] != nil {
-			b, _ := infoMap["md5sum"].([]uint8)
-			info.MD5Sum = string(b)
-		}
+		addIntField(&info.Length, infoMap["length"], true)
+		addStringField(&info.MD5Sum, infoMap["md5sum"], false)
 	}
 
 	metainfo.Info = *info
