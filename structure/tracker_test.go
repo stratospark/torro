@@ -1,7 +1,8 @@
 package structure
+
 import (
-	"testing"
 	. "github.com/smartystreets/goconvey/convey"
+	"testing"
 )
 
 func TestTrackerRequest(t *testing.T) {

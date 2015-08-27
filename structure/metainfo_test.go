@@ -46,6 +46,8 @@ func TestMetainfo(t *testing.T) {
 			file1 := metainfo.Info.Files[1]
 			So(file1.Length, ShouldEqual, 4192838)
 			So(file1.Path, ShouldEqual, ".____padding_file/0")
+
+			So(metainfo.Info.Hash, ShouldEqual, "%29%eb%26%d6%ba%89d%9c%10%5d%c8%e2~%af%dc%0c.%f6%22%92")
 		})
 	})
 }

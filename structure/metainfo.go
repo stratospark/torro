@@ -1,8 +1,10 @@
 package structure
 
 import (
+	"crypto/sha1"
 	"github.com/stratospark/torro/bencoding"
 	"io/ioutil"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -22,12 +24,12 @@ func NewFile(f interface{}) *File {
 
 	paths := rawFile["path"].([]interface{})
 
-	pathStrs := make([]string, 0)
+	pathStrings := make([]string, 0)
 	for _, path := range paths {
 		b, _ := path.([]uint8)
-		pathStrs = append(pathStrs, string(b))
+		pathStrings = append(pathStrings, string(b))
 	}
-	fullPath := strings.Join(pathStrs, "/")
+	fullPath := strings.Join(pathStrings, "/")
 	file.Path = fullPath
 
 	return file
@@ -49,6 +51,7 @@ type Info struct {
 	Length      int
 	MD5Sum      string
 	Files       []File
+	Hash        string
 }
 
 type Metainfo struct {
@@ -92,6 +95,12 @@ func addBoolField(s *bool, val interface{}, required bool) {
 	}
 }
 
+func getRightEncodedSHA1(b []byte) string {
+	h := sha1.New()
+	h.Write(b)
+	return strings.ToLower(url.QueryEscape(string(h.Sum(nil))))
+}
+
 func NewMetainfo(filename string) *Metainfo {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -102,6 +111,8 @@ func NewMetainfo(filename string) *Metainfo {
 	lex := bencoding.BeginLexing(".torrent", torrentStr, bencoding.LexBegin)
 	tokens := bencoding.Collect(lex)
 
+	rawInfoVal := bencoding.GetBencodedInfo(tokens)
+
 	output := bencoding.Parse(tokens)
 	result := output.Output.(map[string]interface{})
 
@@ -110,6 +121,7 @@ func NewMetainfo(filename string) *Metainfo {
 	// Required fields
 	if result["info"] != nil {
 		addInfoFields(metainfo, result["info"].(map[string]interface{}))
+		metainfo.Info.Hash = getRightEncodedSHA1(rawInfoVal)
 	} else {
 		panic("MISSING REQUIRED FIELD: info")
 	}

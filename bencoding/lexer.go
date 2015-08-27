@@ -72,6 +72,7 @@ func GetBencodedInfo(tokens []Token) []byte {
 			dictStack.Pop()
 			if dictStack.Size() == 1 && endInfo == 0 {
 				endInfo = i - 1
+				infoBytes = append(infoBytes, token.Value...)
 			}
 		}
 		if startInfo == 0 && string(tokens[i+3].Value) == "info" && dictStack.Size() == 1 {
@@ -82,6 +83,7 @@ func GetBencodedInfo(tokens []Token) []byte {
 		}
 	}
 
+	//	fmt.Println(fmt.Sprintf("%x", infoBytes[len(infoBytes)-2:]))
 	return infoBytes
 }
 

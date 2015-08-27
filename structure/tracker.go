@@ -1,7 +1,6 @@
 package structure
 
 type TrackerRequest struct {
-
 }
 
 func NewTrackerRequest() *TrackerRequest {
