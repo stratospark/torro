@@ -30,5 +30,22 @@ func TestMetainfo(t *testing.T) {
 
 			So(metainfo.Info.Files, ShouldBeNil)
 		})
+
+		Convey("Given a Multiple File Mode torrent", func() {
+			filename := "../testfiles/TheInternetsOwnBoyTheStoryOfAaronSwartz_archive.torrent"
+			metainfo := NewMetainfo(filename)
+			So(metainfo, ShouldNotBeNil)
+
+			So(metainfo.Info.Files, ShouldNotBeNil)
+
+			file0 := metainfo.Info.Files[0]
+			So(file0.Length, ShouldEqual, 1466)
+			So(file0.MD5sum, ShouldEqual, "8969eabd433acad882bc994b21ecc9b4")
+			So(file0.Path, ShouldEqual, "TheInternetsOwnBoyTheStoryOfAaronSwartz_meta.xml")
+
+			file1 := metainfo.Info.Files[1]
+			So(file1.Length, ShouldEqual, 4192838)
+			So(file1.Path, ShouldEqual, ".____padding_file/0")
+		})
 	})
 }

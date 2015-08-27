@@ -5,8 +5,8 @@ import (
 	"github.com/kr/pretty"
 	"github.com/stratospark/torro/bencoding"
 	"io/ioutil"
-	"time"
 	"os"
+	"time"
 )
 
 func main() {
@@ -33,7 +33,7 @@ func main() {
 	output := bencoding.Parse(tokens)
 	result := output.Output.(map[string]interface{})
 
-	conv := func (val interface{}) string {
+	conv := func(val interface{}) string {
 		b, _ := val.([]uint8)
 		return string(b)
 	}
@@ -60,7 +60,7 @@ func main() {
 	//	pretty.Println("Info/pieces:", info["pieces"].(string)[:4])
 	pretty.Println("Info/Length:", info["length"])
 	pretty.Println("Info/md5sum:", info["md5sum"])
-//	pretty.Println("Info/files:", info["files"])
+	//	pretty.Println("Info/files:", info["files"])
 
 	if info["files"] != nil {
 		files := info["files"].([]interface{})

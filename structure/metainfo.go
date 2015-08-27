@@ -3,14 +3,34 @@ package structure
 import (
 	"github.com/stratospark/torro/bencoding"
 	"io/ioutil"
+	"strings"
 	"time"
-	"fmt"
 )
 
 type File struct {
 	Length int
 	MD5sum string
 	Path   string
+}
+
+func NewFile(f interface{}) *File {
+	rawFile := f.(map[string]interface{})
+	file := &File{}
+	addIntField(&file.Length, rawFile["length"], true)
+	addStringField(&file.MD5sum, rawFile["md5sum"], false)
+	addStringField(&file.MD5sum, rawFile["md5"], false)
+
+	paths := rawFile["path"].([]interface{})
+
+	pathStrs := make([]string, 0)
+	for _, path := range paths {
+		b, _ := path.([]uint8)
+		pathStrs = append(pathStrs, string(b))
+	}
+	fullPath := strings.Join(pathStrs, "/")
+	file.Path = fullPath
+
+	return file
 }
 
 type InfoMode int
@@ -42,24 +62,24 @@ type Metainfo struct {
 }
 
 func addStringField(s *string, val interface{}, required bool) {
-		if val != nil {
-			b, _ := val.([]uint8)
-			*s = string(b)
-		} else {
-			if required {
-				panic("MISSING REQUIRED FIELD: announce")
-			}
+	if val != nil {
+		b, _ := val.([]uint8)
+		*s = string(b)
+	} else {
+		if required {
+			panic("MISSING REQUIRED FIELD: announce")
 		}
+	}
 }
 
 func addIntField(s *int, val interface{}, required bool) {
-		if val != nil {
-			*s = val.(int)
-		} else {
-			if required {
-				panic("MISSING REQUIRED FIELD: announce")
-			}
+	if val != nil {
+		*s = val.(int)
+	} else {
+		if required {
+			panic("MISSING REQUIRED FIELD: announce")
 		}
+	}
 }
 
 func addBoolField(s *bool, val interface{}, required bool) {
@@ -127,10 +147,12 @@ func addInfoFields(metainfo *Metainfo, infoMap map[string]interface{}) {
 	// Check whether single or multiple file mode
 	if infoMap["files"] != nil {
 		info.Mode = InfoModeMultiple
-		files := infoMap["files"].(map[string]interface{})
-		for _, file := range files {
-			fmt.Println(file)
+		rawFiles := infoMap["files"].([]interface{})
+		files := make([]File, 0)
+		for _, rawFile := range rawFiles {
+			files = append(files, *NewFile(rawFile))
 		}
+		info.Files = files
 	} else {
 		info.Mode = InfoModeSingle
 		addIntField(&info.Length, infoMap["length"], true)
