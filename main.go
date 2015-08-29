@@ -5,20 +5,23 @@ import (
 	"github.com/kr/pretty"
 	"github.com/stratospark/torro/bencoding"
 	"io/ioutil"
-	"os"
 	"time"
+	"flag"
+	"github.com/stratospark/torro/structure"
 )
 
 func main() {
 	println("TORRO!")
 
 	var filename string
-	if len(os.Args) > 1 {
-		filename = os.Args[1]
+	if len(flag.Args()) > 1 {
+		filename = flag.Args()[0]
 	} else {
 		filename = "testfiles/TheInternetsOwnBoyTheStoryOfAaronSwartz_archive.torrent"
-
 	}
+
+	pPrint := flag.String("print", "metainfo", "either tokens, parsed, or metainfo")
+	flag.Parse()
 
 	fmt.Println("\n\n\n")
 	fmt.Println("Parsing: ", filename)
@@ -31,11 +34,32 @@ func main() {
 	lex := bencoding.BeginLexing(".torrent", torrentStr, bencoding.LexBegin)
 	tokens := bencoding.Collect(lex)
 
-	fmt.Println("Bencoded info value")
-	fmt.Println(string(bencoding.GetBencodedInfo(tokens)))
-
 	output := bencoding.Parse(tokens)
 	result := output.Output.(map[string]interface{})
+
+	metainfo := structure.NewMetainfo(filename)
+
+	switch *pPrint {
+	case "tokens":
+		PrintTokens(&tokens)
+	case "parsed":
+		PrintParsedStructure(result)
+	case "metainfo":
+		PrintMetainfo(metainfo)
+	default:
+		PrintMetainfo(metainfo)
+	}
+
+}
+
+func PrintTokens(tokens *[]bencoding.Token) {
+	fmt.Println("Printing Tokens:\n\n")
+	for _, token := range *tokens {
+		fmt.Println(token)
+	}
+}
+
+func PrintParsedStructure(result map[string]interface{}) {
 
 	conv := func(val interface{}) string {
 		b, _ := val.([]uint8)
@@ -90,4 +114,8 @@ func main() {
 	//			}
 	//		}
 	//	}
+}
+
+func PrintMetainfo(metainfo *structure.Metainfo) {
+	fmt.Println(metainfo.Announce)
 }
