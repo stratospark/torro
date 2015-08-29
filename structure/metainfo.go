@@ -52,6 +52,7 @@ type Info struct {
 	MD5Sum      string
 	Files       []File
 	Hash        string
+	TotalBytes  int
 }
 
 type Metainfo struct {
@@ -156,20 +157,27 @@ func addInfoFields(metainfo *Metainfo, infoMap map[string]interface{}) {
 	addBoolField(&info.Private, infoMap["private"], false)
 	addStringField(&info.Name, infoMap["name"], true)
 
+	totalBytes := 0
+
 	// Check whether single or multiple file mode
 	if infoMap["files"] != nil {
 		info.Mode = InfoModeMultiple
 		rawFiles := infoMap["files"].([]interface{})
 		files := make([]File, 0)
 		for _, rawFile := range rawFiles {
-			files = append(files, *NewFile(rawFile))
+			newFile := *NewFile(rawFile)
+			files = append(files, newFile)
+			totalBytes += newFile.Length
 		}
 		info.Files = files
 	} else {
 		info.Mode = InfoModeSingle
 		addIntField(&info.Length, infoMap["length"], true)
 		addStringField(&info.MD5Sum, infoMap["md5sum"], false)
+		totalBytes = info.Length
 	}
+
+	info.TotalBytes = totalBytes
 
 	metainfo.Info = *info
 }

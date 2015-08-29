@@ -27,6 +27,7 @@ func TestMetainfo(t *testing.T) {
 
 			So(metainfo.Info.Name, ShouldEqual, "ubuntu-14.04.1-desktop-amd64.iso")
 			So(metainfo.Info.Length, ShouldEqual, 1028653056)
+			So(metainfo.Info.TotalBytes, ShouldEqual, metainfo.Info.Length)
 
 			So(metainfo.Info.Files, ShouldBeNil)
 		})
@@ -48,6 +49,12 @@ func TestMetainfo(t *testing.T) {
 			So(file1.Path, ShouldEqual, ".____padding_file/0")
 
 			So(metainfo.Info.Hash, ShouldEqual, "%29%eb%26%d6%ba%89d%9c%10%5d%c8%e2~%af%dc%0c.%f6%22%92")
+
+			totalBytes := 0
+			for _, file := range metainfo.Info.Files {
+				totalBytes += file.Length
+			}
+			So(metainfo.Info.TotalBytes, ShouldEqual, totalBytes)
 		})
 	})
 }
