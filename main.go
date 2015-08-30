@@ -1,13 +1,13 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/kr/pretty"
 	"github.com/stratospark/torro/bencoding"
+	"github.com/stratospark/torro/structure"
 	"io/ioutil"
 	"time"
-	"flag"
-	"github.com/stratospark/torro/structure"
 )
 
 func main() {

@@ -2,9 +2,11 @@ package structure
 
 import (
 	"encoding/binary"
+	"fmt"
 	"github.com/stratospark/torro/bencoding"
 	"net"
 	"strconv"
+	"strings"
 )
 
 type TrackerRequest struct {
@@ -65,6 +67,10 @@ type Peer struct {
 	Port uint16
 }
 
+func (peer *Peer) String() string {
+	return fmt.Sprintf(" (%s:%d) ", peer.IP, peer.Port)
+}
+
 type TrackerResponse struct {
 	Complete    int
 	Incomplete  int
@@ -72,6 +78,17 @@ type TrackerResponse struct {
 	Interval    int
 	MinInterval int
 	Peers       []Peer
+}
+
+func (tr *TrackerResponse) String() string {
+	peerList := make([]string, 0)
+	for _, peer := range tr.Peers {
+		peerList = append(peerList, peer.String())
+	}
+	joinedPeers := strings.Join(peerList, ", ")
+
+	return fmt.Sprintf("Response [Complete: %d, Incomplete %d, Downloaded: %d, Interval: %d, MinInterval: %d, Peers: %q]",
+		tr.Complete, tr.Incomplete, tr.Downloaded, tr.Interval, tr.MinInterval, joinedPeers)
 }
 
 func NewTrackerResponse(responseStr string) *TrackerResponse {
