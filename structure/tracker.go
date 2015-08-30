@@ -2,6 +2,7 @@ package structure
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"github.com/stratospark/torro/bencoding"
 	"net"
@@ -78,6 +79,8 @@ type TrackerResponse struct {
 	Interval    int
 	MinInterval int
 	Peers       []Peer
+
+	FailureReason string
 }
 
 func (tr *TrackerResponse) String() string {
@@ -91,23 +94,40 @@ func (tr *TrackerResponse) String() string {
 		tr.Complete, tr.Incomplete, tr.Downloaded, tr.Interval, tr.MinInterval, joinedPeers)
 }
 
-func NewTrackerResponse(responseStr string) *TrackerResponse {
+func NewTrackerResponse(responseStr string) (*TrackerResponse, error) {
 	lex := bencoding.BeginLexing("response", responseStr, bencoding.LexBegin)
 	tokens := bencoding.Collect(lex)
 	parser := bencoding.Parse(tokens)
 	o := parser.Output.(map[string]interface{})
-	//	fmt.Println(o)
 
 	// TODO: Handle required/optional fields
 	response := &TrackerResponse{}
-	addIntField(&response.Complete, o["complete"], true)
-	addIntField(&response.Incomplete, o["incomplete"], true)
-	addIntField(&response.Downloaded, o["downloaded"], false)
-	addIntField(&response.Interval, o["interval"], true)
-	addIntField(&response.MinInterval, o["min interval"], false)
+
+	addStringField("failure reason", &response.FailureReason, o["failure reason"], false)
+	if response.FailureReason != "" {
+		return response, errors.New("Tracker Request Failure")
+	}
+
+	err := addIntField("complete", &response.Complete, o["complete"], true)
+	if err != nil {
+		return response, err
+	}
+	err = addIntField("incomplete", &response.Incomplete, o["incomplete"], true)
+	if err != nil {
+		return response, err
+	}
+	addIntField("downloaded", &response.Downloaded, o["downloaded"], false)
+	err = addIntField("interval", &response.Interval, o["interval"], true)
+	if err != nil {
+		return response, err
+	}
+	addIntField("min_interval", &response.MinInterval, o["min interval"], false)
 
 	// TODO: Handle dictionary vs binary peer models
 	peers := make([]Peer, 0)
+	if _, ok := o["peers"]; !ok {
+		return response, errors.New(fmt.Sprint("Missing Required Field: peers"))
+	}
 	peerBytes := o["peers"].([]byte)
 	for i := 0; i < len(peerBytes); i += 6 {
 		ip := net.IPv4(peerBytes[i+3], peerBytes[i+2], peerBytes[i+1], peerBytes[i])
@@ -117,5 +137,5 @@ func NewTrackerResponse(responseStr string) *TrackerResponse {
 	}
 	response.Peers = peers
 
-	return response
+	return response, nil
 }

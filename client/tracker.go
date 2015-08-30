@@ -28,22 +28,25 @@ func NewTrackerClient() *TrackerClient {
 	return tc
 }
 
-func (tc *TrackerClient) MakeAnnounceRequest(req *structure.TrackerRequest, event TrackerRequestEvent) *structure.TrackerResponse {
+func (tc *TrackerClient) MakeAnnounceRequest(req *structure.TrackerRequest, event TrackerRequestEvent) (tr *structure.TrackerResponse, err error) {
 	url := fmt.Sprint(req.GetURL(), "&event=", event)
 	resp, err := tc.HTTP.Get(url)
 	log.Print("MakeAnounceRequest, URL: ", url)
 	if err != nil {
-		panic(err.Error())
+		return tr, err
 	}
 
 	contents, err := ioutil.ReadAll(resp.Body)
 	log.Println("MakeAnnounceRequest, Contents: ", string(contents))
 	if err != nil {
-		panic(err.Error())
+		return tr, err
 	}
 
-	tr := structure.NewTrackerResponse(string(contents))
+	tr, err = structure.NewTrackerResponse(string(contents))
+	if err != nil {
+		return tr, err
+	}
 	log.Println("MakeAnnounceRequest, TrackerResponse: ", tr)
 
-	return tr
+	return tr, nil
 }

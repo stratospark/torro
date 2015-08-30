@@ -2,6 +2,8 @@ package structure
 
 import (
 	"crypto/sha1"
+	"errors"
+	"fmt"
 	"github.com/stratospark/torro/bencoding"
 	"io/ioutil"
 	"net/url"
@@ -18,9 +20,9 @@ type File struct {
 func NewFile(f interface{}) *File {
 	rawFile := f.(map[string]interface{})
 	file := &File{}
-	addIntField(&file.Length, rawFile["length"], true)
-	addStringField(&file.MD5sum, rawFile["md5sum"], false)
-	addStringField(&file.MD5sum, rawFile["md5"], false)
+	addIntField("length", &file.Length, rawFile["length"], true)
+	addStringField("md5sum", &file.MD5sum, rawFile["md5sum"], false)
+	addStringField("md5", &file.MD5sum, rawFile["md5"], false)
 
 	paths := rawFile["path"].([]interface{})
 
@@ -65,35 +67,38 @@ type Metainfo struct {
 	Encoding     string
 }
 
-func addStringField(s *string, val interface{}, required bool) {
+func addStringField(name string, s *string, val interface{}, required bool) error {
 	if val != nil {
 		b, _ := val.([]uint8)
 		*s = string(b)
 	} else {
 		if required {
-			panic("MISSING REQUIRED FIELD: announce")
+			return errors.New(fmt.Sprint("Missing Required Field: ", name))
 		}
 	}
+	return nil
 }
 
-func addIntField(s *int, val interface{}, required bool) {
+func addIntField(name string, s *int, val interface{}, required bool) error {
 	if val != nil {
 		*s = val.(int)
 	} else {
 		if required {
-			panic("MISSING REQUIRED FIELD: announce")
+			return errors.New(fmt.Sprint("Missing Required Field: ", name))
 		}
 	}
+	return nil
 }
 
-func addBoolField(s *bool, val interface{}, required bool) {
+func addBoolField(name string, s *bool, val interface{}, required bool) error {
 	if val != nil {
 		*s = val.(bool)
 	} else {
 		if required {
-			panic("MISSING REQUIRED FIELD: announce")
+			return errors.New(fmt.Sprint("Missing Required Field: ", name))
 		}
 	}
+	return nil
 }
 
 func getRightEncodedSHA1(b []byte) string {
@@ -127,7 +132,7 @@ func NewMetainfo(filename string) *Metainfo {
 		panic("MISSING REQUIRED FIELD: info")
 	}
 
-	addStringField(&metainfo.Announce, result["announce"], true)
+	addStringField("announce", &metainfo.Announce, result["announce"], true)
 
 	// Optional fields
 	if result["announce-list"] != nil {
@@ -140,9 +145,9 @@ func NewMetainfo(filename string) *Metainfo {
 		metainfo.CreationDate = t
 	}
 
-	addStringField(&metainfo.Comment, result["comment"], false)
-	addStringField(&metainfo.CreatedBy, result["created by"], false)
-	addStringField(&metainfo.Encoding, result["encoding"], false)
+	addStringField("comment", &metainfo.Comment, result["comment"], false)
+	addStringField("created by", &metainfo.CreatedBy, result["created by"], false)
+	addStringField("encoding", &metainfo.Encoding, result["encoding"], false)
 
 	return metainfo
 }
@@ -150,12 +155,12 @@ func NewMetainfo(filename string) *Metainfo {
 func addInfoFields(metainfo *Metainfo, infoMap map[string]interface{}) {
 	info := &Info{}
 
-	addIntField(&info.PieceLength, infoMap["piece length"], true)
+	addIntField("piece length", &info.PieceLength, infoMap["piece length"], true)
 
 	// TODO: may need to keep this as byte array?
-	addStringField(&info.Pieces, infoMap["pieces"], true)
-	addBoolField(&info.Private, infoMap["private"], false)
-	addStringField(&info.Name, infoMap["name"], true)
+	addStringField("pieces", &info.Pieces, infoMap["pieces"], true)
+	addBoolField("private", &info.Private, infoMap["private"], false)
+	addStringField("name", &info.Name, infoMap["name"], true)
 
 	totalBytes := 0
 
@@ -172,8 +177,8 @@ func addInfoFields(metainfo *Metainfo, infoMap map[string]interface{}) {
 		info.Files = files
 	} else {
 		info.Mode = InfoModeSingle
-		addIntField(&info.Length, infoMap["length"], true)
-		addStringField(&info.MD5Sum, infoMap["md5sum"], false)
+		addIntField("length", &info.Length, infoMap["length"], true)
+		addStringField("md5sum", &info.MD5Sum, infoMap["md5sum"], false)
 		totalBytes = info.Length
 	}
 
