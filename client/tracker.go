@@ -1,7 +1,6 @@
 package client
 
 import (
-	"fmt"
 	"github.com/stratospark/torro/structure"
 	"io/ioutil"
 	"log"
@@ -29,7 +28,8 @@ func NewTrackerClient() *TrackerClient {
 }
 
 func (tc *TrackerClient) MakeAnnounceRequest(req *structure.TrackerRequest, event TrackerRequestEvent) (tr *structure.TrackerResponse, err error) {
-	url := fmt.Sprint(req.GetURL(), "&event=", event)
+	req.Event = string(event)
+	url := req.GetURL()
 	resp, err := tc.HTTP.Get(url)
 	log.Print("MakeAnounceRequest, URL: ", url)
 	if err != nil {

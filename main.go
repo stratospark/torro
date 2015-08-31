@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/kr/pretty"
 	"github.com/stratospark/torro/bencoding"
+	"github.com/stratospark/torro/client"
 	"github.com/stratospark/torro/structure"
 	"io/ioutil"
 	"time"
@@ -13,15 +14,17 @@ import (
 func main() {
 	println("TORRO!")
 
+	pPrint := flag.String("print", "metainfo", "either tokens, parsed, or metainfo")
+
+	flag.Parse()
+
 	var filename string
-	if len(flag.Args()) > 1 {
+	fmt.Println(flag.Args())
+	if len(flag.Args()) > 0 {
 		filename = flag.Args()[0]
 	} else {
 		filename = "testfiles/TheInternetsOwnBoyTheStoryOfAaronSwartz_archive.torrent"
 	}
-
-	pPrint := flag.String("print", "metainfo", "either tokens, parsed, or metainfo")
-	flag.Parse()
 
 	fmt.Println("\n\n\n")
 	fmt.Println("Parsing: ", filename)
@@ -38,6 +41,19 @@ func main() {
 	result := output.Output.(map[string]interface{})
 
 	metainfo := structure.NewMetainfo(filename)
+
+	c := client.NewTrackerClient()
+	req := structure.NewTrackerRequest(metainfo)
+	req.PeerID = "-qB3230-u~QGMmUs~yXH"
+	req.Port = 55555
+	req.Compact = true
+	req.NoPeerID = true
+	res, err := c.MakeAnnounceRequest(req, client.TrackerRequestStarted)
+	if err != nil {
+		fmt.Println(res.FailureReason)
+		panic(err.Error())
+	}
+	fmt.Println(res)
 
 	switch *pPrint {
 	case "tokens":
