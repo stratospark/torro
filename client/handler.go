@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"strings"
@@ -72,14 +73,33 @@ func (s *BTService) StartListening() (err error) {
 					log.Println(err)
 				}
 				continue
+			} else {
+				log.Println(conn)
+				go handleConnection(conn)
 			}
 
-			log.Println(conn)
-			conn.Close()
 		}
 	}()
 
 	return nil
+}
+
+func handleConnection(c net.Conn) {
+	log.Println("Handle Connection")
+	defer c.Close()
+
+	buf := make([]byte, 4)
+	log.Println("Waiting to readfull")
+	_, err := io.ReadFull(c, buf)
+	if err != nil {
+		log.Println("[HandleConnection] Error: ", err)
+	}
+
+	log.Println("[HandleConnection] buf: ", fmt.Sprintf("%s ", buf))
+
+	c.Write([]byte("pong"))
+
+	return
 }
 
 /*
