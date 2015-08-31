@@ -84,19 +84,54 @@ func (s *BTService) StartListening() (err error) {
 	return nil
 }
 
+type Handshake struct {
+	Length            byte
+	Name              string
+	ReservedExtension []byte
+	Hash              []byte
+	PeerID            []byte
+}
+
+func (h *Handshake) String() string {
+	return fmt.Sprintf("pstrlen: %d, name: %s, reserved extension: %x , hash: %x , peer id: %s", h.Length, h.Name, h.ReservedExtension, h.Hash, h.PeerID)
+}
+
 func handleConnection(c net.Conn) {
 	log.Println("Handle Connection")
 	defer c.Close()
 
-	buf := make([]byte, 4)
+	// First connection, assume handshake messsage
+	// Get the protocol name length
+	buf := make([]byte, 1)
 	log.Println("Waiting to readfull")
 	_, err := io.ReadFull(c, buf)
 	if err != nil {
 		log.Println("[HandleConnection] Error: ", err)
+		return
+	}
+	pstrLen := int(buf[0])
+
+	// Get the rest of the handshake message
+	buf = make([]byte, pstrLen+48)
+	_, err = io.ReadFull(c, buf)
+	if err != nil {
+		log.Println("[HandleConnection] Error: ", err)
+		return
 	}
 
-	log.Println("[HandleConnection] buf: ", fmt.Sprintf("%s ", buf))
+	// Parse fields out of the message
+	handshake := &Handshake{
+		Length:            byte(pstrLen),
+		Name:              string(buf[0:pstrLen]),
+		ReservedExtension: buf[pstrLen : pstrLen+8],
+		Hash:              buf[pstrLen+8 : pstrLen+8+20],
+		PeerID:            buf[pstrLen+8+20 : pstrLen+8+20+20],
+	}
 
+	log.Printf("[HandleConnection] Handshake: %q", buf)
+	log.Printf("%q", handshake)
+
+	log.Printf("Writing byte\n")
 	c.Write([]byte("pong"))
 
 	return
