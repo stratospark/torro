@@ -13,7 +13,8 @@ import (
 BTConn contains the information necessary to maintain a P2P
 connection to a Peer according to the BitTorrent protocol.
 */
-type BTConn struct{}
+type BTConn struct {
+}
 
 type Handler interface {
 	StartListening(chan BTConn, error)
@@ -55,7 +56,12 @@ func (s *BTService) StartListening() (err error) {
 	s.Listener = l
 	s.Listening = true
 
+	hsChan := make(chan net.Conn, 1)
+	msgChan := make(chan string, 1)
+
 	go func() {
+		go handleMessages(hsChan, msgChan)
+
 		for {
 			select {
 			case <-s.CloseCh:
@@ -75,7 +81,7 @@ func (s *BTService) StartListening() (err error) {
 				continue
 			} else {
 				log.Println(conn)
-				go handleConnection(conn)
+				go handleConnection(conn, hsChan)
 			}
 
 		}
@@ -96,10 +102,37 @@ func (h *Handshake) String() string {
 	return fmt.Sprintf("pstrlen: %d, name: %s, reserved extension: %x , hash: %x , peer id: %s", h.Length, h.Name, h.ReservedExtension, h.Hash, h.PeerID)
 }
 
-func handleConnection(c net.Conn) {
-	log.Println("Handle Connection")
-	defer c.Close()
+func handleMessages(hsChan <-chan net.Conn, msgChan <-chan string) {
+	peers := make(map[net.Conn]string)
 
+	for {
+		select {
+		case hs := <-hsChan:
+			handleHandshake(hs)
+			peers[hs] = "added"
+			log.Printf("Writing byte\n")
+			hs.Write([]byte("pong"))
+			hs.Close()
+		default:
+
+		}
+	}
+}
+
+func handleConnection(c net.Conn, hsChan chan<- net.Conn) {
+	log.Println("Handle Connection")
+
+	hsChan <- c
+
+	//	handleHandshake(c)
+
+	//	log.Printf("Writing byte\n")
+	//	c.Write([]byte("pong"))
+
+	return
+}
+
+func handleHandshake(c net.Conn) {
 	// First connection, assume handshake messsage
 	// Get the protocol name length
 	buf := make([]byte, 1)
@@ -130,9 +163,6 @@ func handleConnection(c net.Conn) {
 
 	log.Printf("[HandleConnection] Handshake: %q", buf)
 	log.Printf("%q", handshake)
-
-	log.Printf("Writing byte\n")
-	c.Write([]byte("pong"))
 
 	return
 }
