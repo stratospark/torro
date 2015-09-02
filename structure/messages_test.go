@@ -32,5 +32,23 @@ func TestHandshake(t *testing.T) {
 		So(b, ShouldNotBeNil)
 		So(b, ShouldResemble, []byte(msg))
 	})
+}
 
+func TestMessages(t *testing.T) {
+	Convey("Parse an 'Interested' message from bytes", t, func() {
+		msg := "\x00\x00\x00\x01\x02"
+		br := bytes.NewReader([]byte(msg))
+		m, err := ReadMessage(br)
+		So(m, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+		So(m, ShouldResemble, &Message{Type: MessageTypeInterested,
+			Length: 1})
+	})
+
+	Convey("Convert an 'Interested' message to bytes", t, func() {
+		m := &Message{Length: 1, Type: MessageTypeInterested}
+		b := m.Bytes()
+		msg := "\x00\x00\x00\x01\x02"
+		So(b, ShouldResemble, []byte(msg))
+	})
 }

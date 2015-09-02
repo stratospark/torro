@@ -2,6 +2,7 @@ package structure
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -74,4 +75,51 @@ func (h *Handshake) Bytes() []byte {
 	buf.Write(h.Hash)
 	buf.Write(h.PeerID)
 	return buf.Bytes()
+}
+
+type MessageType int
+
+const (
+	MessageTypeInterested MessageType = 2
+)
+
+type Message struct {
+	Length  int
+	Type    MessageType
+	Payload []byte
+}
+
+func (m *Message) Bytes() []byte {
+	bs := make([]byte, 0)
+	buf := bytes.NewBuffer(bs)
+
+	lenBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(lenBytes, uint32(m.Length))
+	buf.Write(lenBytes)
+
+	buf.Write([]byte{byte(m.Type)})
+	return buf.Bytes()
+}
+
+func ReadMessage(r Reader) (m *Message, err error) {
+	buf := make([]byte, 4)
+	log.Println("Waiting to read full")
+	_, err = io.ReadFull(r, buf)
+	if err != nil {
+		log.Println("[HandleConnection] Error: ", err)
+		return nil, err
+	}
+	mLen := int(binary.BigEndian.Uint32(buf))
+
+	buf = make([]byte, mLen)
+	_, err = io.ReadFull(r, buf)
+	if err != nil {
+		log.Println("[HandleConnection] Error: ", err)
+		return nil, err
+	}
+	mType := MessageType(buf[0])
+
+	m = &Message{Length: mLen, Type: mType}
+
+	return
 }
