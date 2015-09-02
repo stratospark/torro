@@ -80,18 +80,25 @@ func (h *Handshake) Bytes() []byte {
 type MessageType byte
 
 const (
-	MessageTypeKeepAlive  MessageType = 255
-	MessageTypeChoke      MessageType = 0
-	MessageTypeInterested MessageType = 2
+	MessageTypeKeepAlive     MessageType = 255
+	MessageTypeChoke         MessageType = 0
+	MessageTypeUnchoke       MessageType = 1
+	MessageTypeInterested    MessageType = 2
+	MessageTypeNotInterested MessageType = 3
+	MessageTypeHave          MessageType = 4
 )
 
-type Message struct {
+type Message interface {
+	Bytes() []byte
+}
+
+type BasicMessage struct {
 	Length  int
 	Type    MessageType
 	Payload []byte
 }
 
-func (m *Message) Bytes() []byte {
+func (m *BasicMessage) Bytes() []byte {
 	bs := make([]byte, 0)
 	buf := bytes.NewBuffer(bs)
 
@@ -103,7 +110,7 @@ func (m *Message) Bytes() []byte {
 	return buf.Bytes()
 }
 
-func ReadMessage(r Reader) (m *Message, err error) {
+func ReadMessage(r Reader) (m Message, err error) {
 	buf := make([]byte, 4)
 	log.Println("Waiting to read full")
 	_, err = io.ReadFull(r, buf)
@@ -114,7 +121,7 @@ func ReadMessage(r Reader) (m *Message, err error) {
 	mLen := int(binary.BigEndian.Uint32(buf))
 
 	if mLen == 0 {
-		return &Message{Length: 0, Type: MessageTypeKeepAlive}, nil
+		return &BasicMessage{Length: 0, Type: MessageTypeKeepAlive}, nil
 	}
 
 	buf = make([]byte, mLen)
@@ -125,7 +132,12 @@ func ReadMessage(r Reader) (m *Message, err error) {
 	}
 	mType := MessageType(buf[0])
 
-	m = &Message{Length: mLen, Type: mType}
+	if mLen > 1 {
+		mPayload := buf[1:mLen]
+		m = &BasicMessage{Length: mLen, Type: mType, Payload: mPayload}
+	} else {
+		m = &BasicMessage{Length: mLen, Type: mType}
+	}
 
 	return
 }

@@ -36,18 +36,24 @@ func TestHandshake(t *testing.T) {
 
 type StringMessageTest struct {
 	String  string
-	Message *Message
+	Message Message
 }
 
 func TestMessages(t *testing.T) {
 
 	smTests := []StringMessageTest{
 		{"\x00\x00\x00\x00",
-			&Message{Type: MessageTypeKeepAlive, Length: 0}},
+			&BasicMessage{Type: MessageTypeKeepAlive, Length: 0}},
 		{"\x00\x00\x00\x01\x00",
-			&Message{Type: MessageTypeChoke, Length: 1}},
+			&BasicMessage{Type: MessageTypeChoke, Length: 1}},
+		{"\x00\x00\x00\x01\x01",
+			&BasicMessage{Type: MessageTypeUnchoke, Length: 1}},
 		{"\x00\x00\x00\x01\x02",
-			&Message{Type: MessageTypeInterested, Length: 1}},
+			&BasicMessage{Type: MessageTypeInterested, Length: 1}},
+		{"\x00\x00\x00\x01\x03",
+			&BasicMessage{Type: MessageTypeNotInterested, Length: 1}},
+		{"\x00\x00\x00\x05\x04\x00\x00\x18\xa4",
+			&BasicMessage{Type: MessageTypeHave, Length: 5, Payload: []byte("\x00\x00\x18\xa4")}},
 	}
 
 	for _, sm := range smTests {
@@ -62,7 +68,7 @@ func TestMessages(t *testing.T) {
 	}
 
 	Convey("Convert an 'Interested' message to bytes", t, func() {
-		m := &Message{Length: 1, Type: MessageTypeInterested}
+		m := &BasicMessage{Length: 1, Type: MessageTypeInterested}
 		b := m.Bytes()
 		msg := "\x00\x00\x00\x01\x02"
 		So(b, ShouldResemble, []byte(msg))
