@@ -7,6 +7,10 @@ import (
 	"log"
 )
 
+var (
+	ErrNotBitTorrentProtocol error = errors.New("Not BitTorrentProtocol")
+)
+
 type Handshake struct {
 	Length            byte
 	Name              string
@@ -45,7 +49,7 @@ func NewHandshake(r Reader) (h *Handshake, err error) {
 	name := string(buf[0:pstrLen])
 	if name != "BitTorrent protocol" {
 		log.Println("[HandleConnection] Not BitTorrent protocol handshake")
-		return nil, errors.New("Not BitTorrent protocol handshake")
+		return nil, ErrNotBitTorrentProtocol
 	}
 
 	// Parse fields out of the message
