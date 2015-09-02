@@ -72,18 +72,16 @@ func (s *BTService) StartListening() (err error) {
 			default:
 			}
 
-			l.SetDeadline(time.Now().Add(time.Nanosecond))
+			l.SetDeadline(time.Now().Add(time.Millisecond))
 			conn, err := l.AcceptTCP()
 			if err != nil {
 				if !strings.Contains(err.Error(), "i/o timeout") {
 					log.Println(err)
 				}
 				continue
-			} else {
-				log.Println(conn)
-				go handleConnection(conn, hsChan)
 			}
-
+			log.Println(conn)
+			go handleConnection(conn, hsChan)
 		}
 	}()
 
@@ -113,8 +111,6 @@ func handleMessages(hsChan <-chan net.Conn, msgChan <-chan string) {
 			log.Printf("Writing byte\n")
 			hs.Write([]byte("pong"))
 			hs.Close()
-		default:
-
 		}
 	}
 }
@@ -172,7 +168,7 @@ StopListening stops the TCP listener by sending to its Close channel.
 */
 func (s *BTService) StopListening() (err error) {
 	// TODO: Check that listener is actually on
-	fmt.Println("StopListening")
+	log.Println("StopListening")
 	s.CloseCh <- true
 	return nil
 }
