@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/NebulousLabs/go-upnp"
 	"github.com/kr/pretty"
 	"github.com/stratospark/torro/bencoding"
 	"github.com/stratospark/torro/client"
@@ -25,6 +26,14 @@ func main() {
 	log.SetOutput(mw)
 
 	println("TORRO!\n\n\n")
+
+	d, _ := upnp.Discover()
+	ip, _ := d.ExternalIP()
+	_ = d.Forward(55555, "torro")
+	defer d.Clear(55555)
+	log.Printf("Discovered: %q\n", d)
+	log.Printf("External IP: %q\n", ip)
+	log.Printf("Location: %q\n", d.Location())
 
 	// Read command line flags and arguments
 	pPrint := flag.String("print", "metainfo", "either tokens, parsed, or metainfo")
@@ -59,7 +68,7 @@ func main() {
 	c := client.NewTrackerClient()
 	req := structure.NewTrackerRequest(metainfo)
 	req.PeerID = "-qB3230-u~QGMmUs~yXH"
-	req.Port = 8999
+	req.Port = 55555
 	req.Compact = true
 	req.NoPeerID = true
 	res, err := c.MakeAnnounceRequest(req, client.TrackerRequestStarted)
@@ -69,10 +78,10 @@ func main() {
 	}
 	fmt.Println(res)
 
-	//	log.Println("StartListening")
-	//	port := 8999
-	//	s := client.NewBTService(port)
-	//	s.StartListening()
+	log.Println("StartListening")
+	port := 55555
+	s := client.NewBTService(port)
+	s.StartListening()
 
 	switch *pPrint {
 	case "tokens":
