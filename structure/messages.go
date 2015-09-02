@@ -80,6 +80,7 @@ func (h *Handshake) Bytes() []byte {
 type MessageType int
 
 const (
+	MessageTypeKeepAlive  MessageType = 0
 	MessageTypeInterested MessageType = 2
 )
 
@@ -110,6 +111,10 @@ func ReadMessage(r Reader) (m *Message, err error) {
 		return nil, err
 	}
 	mLen := int(binary.BigEndian.Uint32(buf))
+
+	if mLen == 0 {
+		return &Message{Length: 0, Type: MessageTypeKeepAlive}, nil
+	}
 
 	buf = make([]byte, mLen)
 	_, err = io.ReadFull(r, buf)

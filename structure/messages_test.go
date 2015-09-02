@@ -34,16 +34,30 @@ func TestHandshake(t *testing.T) {
 	})
 }
 
+type StringMessageTest struct {
+	String  string
+	Message *Message
+}
+
 func TestMessages(t *testing.T) {
-	Convey("Parse an 'Interested' message from bytes", t, func() {
-		msg := "\x00\x00\x00\x01\x02"
-		br := bytes.NewReader([]byte(msg))
-		m, err := ReadMessage(br)
-		So(m, ShouldNotBeNil)
-		So(err, ShouldBeNil)
-		So(m, ShouldResemble, &Message{Type: MessageTypeInterested,
-			Length: 1})
-	})
+
+	smTests := []StringMessageTest{
+		{"\x00\x00\x00\x00",
+			&Message{Type: MessageTypeKeepAlive, Length: 0}},
+		{"\x00\x00\x00\x01\x02",
+			&Message{Type: MessageTypeInterested, Length: 1}},
+	}
+
+	for _, sm := range smTests {
+		Convey("Parse an 'Interested' message from bytes", t, func() {
+			br := bytes.NewReader([]byte(sm.String))
+			m, err := ReadMessage(br)
+			So(m, ShouldNotBeNil)
+			So(err, ShouldBeNil)
+			So(m, ShouldResemble, sm.Message)
+		})
+
+	}
 
 	Convey("Convert an 'Interested' message to bytes", t, func() {
 		m := &Message{Length: 1, Type: MessageTypeInterested}
