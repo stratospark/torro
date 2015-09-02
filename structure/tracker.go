@@ -24,6 +24,7 @@ type TrackerRequest struct {
 	NumWant    int
 	Key        string
 	TrackerID  string
+	Corrupt    bool
 }
 
 func NewTrackerRequest(metainfo *Metainfo) *TrackerRequest {
@@ -58,6 +59,8 @@ func (request *TrackerRequest) GetURL() string {
 		"&left=" + strconv.Itoa(request.Left()) +
 		"&compact=" + Btos(request.Compact) +
 		"&no_peer_id=" + Btos(request.NoPeerID) +
+		"&corrupt=" + Btos(request.Corrupt) +
+		"&numwant=" + strconv.Itoa(request.NumWant) +
 		"&event=" + request.Event
 
 	return url
