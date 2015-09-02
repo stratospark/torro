@@ -77,10 +77,11 @@ func (h *Handshake) Bytes() []byte {
 	return buf.Bytes()
 }
 
-type MessageType int
+type MessageType byte
 
 const (
-	MessageTypeKeepAlive  MessageType = 0
+	MessageTypeKeepAlive  MessageType = 255
+	MessageTypeChoke      MessageType = 0
 	MessageTypeInterested MessageType = 2
 )
 

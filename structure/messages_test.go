@@ -44,6 +44,8 @@ func TestMessages(t *testing.T) {
 	smTests := []StringMessageTest{
 		{"\x00\x00\x00\x00",
 			&Message{Type: MessageTypeKeepAlive, Length: 0}},
+		{"\x00\x00\x00\x01\x00",
+			&Message{Type: MessageTypeChoke, Length: 1}},
 		{"\x00\x00\x00\x01\x02",
 			&Message{Type: MessageTypeInterested, Length: 1}},
 	}
