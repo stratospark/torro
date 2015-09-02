@@ -7,15 +7,27 @@ import (
 	"github.com/stratospark/torro/bencoding"
 	"github.com/stratospark/torro/client"
 	"github.com/stratospark/torro/structure"
+	"io"
 	"io/ioutil"
+	"log"
+	"os"
 	"time"
 )
 
 func main() {
-	println("TORRO!")
+	// Set up logging to file and stdout
+	f, err := os.OpenFile("torro.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		fmt.Printf("Error opening file: %v", err)
+	}
+	defer f.Close()
+	mw := io.MultiWriter(os.Stdout, f)
+	log.SetOutput(mw)
 
+	println("TORRO!\n\n\n")
+
+	// Read command line flags and arguments
 	pPrint := flag.String("print", "metainfo", "either tokens, parsed, or metainfo")
-
 	flag.Parse()
 
 	var filename string
@@ -26,13 +38,14 @@ func main() {
 		filename = "testfiles/TheInternetsOwnBoyTheStoryOfAaronSwartz_archive.torrent"
 	}
 
-	fmt.Println("\n\n\n")
+	// Read actual .torrent file
 	fmt.Println("Parsing: ", filename)
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		panic(err)
 	}
 
+	// Lex and Parse .torrent file
 	torrentStr := string(data)
 	lex := bencoding.BeginLexing(".torrent", torrentStr, bencoding.LexBegin)
 	tokens := bencoding.Collect(lex)
@@ -40,12 +53,13 @@ func main() {
 	output := bencoding.Parse(tokens)
 	result := output.Output.(map[string]interface{})
 
+	// Read .torrent metainfo and make request to the announce URL
 	metainfo := structure.NewMetainfo(filename)
 
 	c := client.NewTrackerClient()
 	req := structure.NewTrackerRequest(metainfo)
 	req.PeerID = "-qB3230-u~QGMmUs~yXH"
-	req.Port = 55555
+	req.Port = 8999
 	req.Compact = true
 	req.NoPeerID = true
 	res, err := c.MakeAnnounceRequest(req, client.TrackerRequestStarted)
@@ -54,6 +68,11 @@ func main() {
 		panic(err.Error())
 	}
 	fmt.Println(res)
+
+	//	log.Println("StartListening")
+	//	port := 8999
+	//	s := client.NewBTService(port)
+	//	s.StartListening()
 
 	switch *pPrint {
 	case "tokens":
@@ -65,6 +84,8 @@ func main() {
 	default:
 		PrintMetainfo(metainfo)
 	}
+
+	time.Sleep(time.Second * 60)
 
 }
 
