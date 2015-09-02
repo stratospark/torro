@@ -1,6 +1,7 @@
 package structure
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -62,4 +63,15 @@ func NewHandshake(r Reader) (h *Handshake, err error) {
 	}
 
 	return h, nil
+}
+
+func (h *Handshake) Bytes() []byte {
+	bs := make([]byte, 0)
+	buf := bytes.NewBuffer(bs)
+	buf.Write([]byte{h.Length})
+	buf.Write([]byte(h.Name))
+	buf.Write(h.ReservedExtension)
+	buf.Write(h.Hash)
+	buf.Write(h.PeerID)
+	return buf.Bytes()
 }
