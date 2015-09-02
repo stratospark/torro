@@ -3,19 +3,40 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/NebulousLabs/go-upnp"
 	"github.com/kr/pretty"
 	"github.com/stratospark/torro/bencoding"
 	"github.com/stratospark/torro/client"
 	"github.com/stratospark/torro/structure"
+	"io"
 	"io/ioutil"
+	"log"
+	"os"
 	"time"
 )
 
 func main() {
-	println("TORRO!")
+	// Set up logging to file and stdout
+	f, err := os.OpenFile("torro.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		fmt.Printf("Error opening file: %v", err)
+	}
+	defer f.Close()
+	mw := io.MultiWriter(os.Stdout, f)
+	log.SetOutput(mw)
 
+	println("TORRO!\n\n\n")
+
+	d, _ := upnp.Discover()
+	ip, _ := d.ExternalIP()
+	_ = d.Forward(55555, "torro")
+	defer d.Clear(55555)
+	log.Printf("Discovered: %q\n", d)
+	log.Printf("External IP: %q\n", ip)
+	log.Printf("Location: %q\n", d.Location())
+
+	// Read command line flags and arguments
 	pPrint := flag.String("print", "metainfo", "either tokens, parsed, or metainfo")
-
 	flag.Parse()
 
 	var filename string
@@ -26,13 +47,14 @@ func main() {
 		filename = "testfiles/TheInternetsOwnBoyTheStoryOfAaronSwartz_archive.torrent"
 	}
 
-	fmt.Println("\n\n\n")
+	// Read actual .torrent file
 	fmt.Println("Parsing: ", filename)
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		panic(err)
 	}
 
+	// Lex and Parse .torrent file
 	torrentStr := string(data)
 	lex := bencoding.BeginLexing(".torrent", torrentStr, bencoding.LexBegin)
 	tokens := bencoding.Collect(lex)
@@ -40,6 +62,7 @@ func main() {
 	output := bencoding.Parse(tokens)
 	result := output.Output.(map[string]interface{})
 
+	// Read .torrent metainfo and make request to the announce URL
 	metainfo := structure.NewMetainfo(filename)
 
 	c := client.NewTrackerClient()
@@ -55,6 +78,11 @@ func main() {
 	}
 	fmt.Println(res)
 
+	log.Println("StartListening")
+	port := 55555
+	s := client.NewBTService(port)
+	s.StartListening()
+
 	switch *pPrint {
 	case "tokens":
 		PrintTokens(&tokens)
@@ -65,6 +93,8 @@ func main() {
 	default:
 		PrintMetainfo(metainfo)
 	}
+
+	time.Sleep(time.Second * 60)
 
 }
 

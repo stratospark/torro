@@ -33,6 +33,11 @@ func TestTrackerRequest(t *testing.T) {
 			noPeerInt = 1
 		}
 
+		corruptInt := 0
+		if request.Corrupt {
+			corruptInt = 1
+		}
+
 		url := metainfo.Announce +
 			"?info_hash=" + metainfo.Info.Hash +
 			"&peer_id=" + request.PeerID +
@@ -42,6 +47,8 @@ func TestTrackerRequest(t *testing.T) {
 			"&left=" + strconv.Itoa(metainfo.Info.TotalBytes-request.Downloaded) +
 			"&compact=" + strconv.Itoa(compactInt) +
 			"&no_peer_id=" + strconv.Itoa(noPeerInt) +
+			"&corrupt=" + strconv.Itoa(corruptInt) +
+			"&numwant=" + strconv.Itoa(request.NumWant) +
 			"&event=" + request.Event
 
 		So(request.GetURL(), ShouldEqual, url)
