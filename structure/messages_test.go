@@ -54,6 +54,8 @@ func TestMessages(t *testing.T) {
 			&BasicMessage{Type: MessageTypeNotInterested, Length: 1}},
 		{"\x00\x00\x00\x05\x04\x00\x00\x18\xa4",
 			&HaveMessage{BasicMessage: BasicMessage{Type: MessageTypeHave, Length: 5, Payload: []byte("\x00\x00\x18\xa4")}, PieceIndex: 6308}},
+		//		{"\x00\x00\x00\x05\x05\xff\xff\xff\x01",
+		//			&BitfieldMessage{BasicMessage: BasicMessage{Type: MessageTypeBitfield, Length: 5, Payload: []byte("\xff\xff\xff\xff")}, Bitfield: []byte()}},
 	}
 
 	for _, sm := range smTests {
