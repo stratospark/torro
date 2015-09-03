@@ -1,9 +1,8 @@
 package client
 
 import (
-	"errors"
 	"fmt"
-	"io"
+	"github.com/stratospark/torro/structure"
 	"log"
 	"net"
 	"strings"
@@ -91,18 +90,6 @@ func (s *BTService) StartListening() (err error) {
 	return nil
 }
 
-type Handshake struct {
-	Length            byte
-	Name              string
-	ReservedExtension []byte
-	Hash              []byte
-	PeerID            []byte
-}
-
-func (h *Handshake) String() string {
-	return fmt.Sprintf("pstrlen: %d, name: %s, reserved extension: %x , hash: %x , peer id: %s", h.Length, h.Name, h.ReservedExtension, h.Hash, h.PeerID)
-}
-
 func (s *BTService) handleMessages(hsChan <-chan net.Conn, msgChan <-chan string) {
 	//	peers := make(map[net.Conn]string)
 
@@ -136,40 +123,12 @@ func handleConnection(c net.Conn, hsChan chan<- net.Conn) {
 func handleHandshake(c net.Conn) error {
 	// First connection, assume handshake messsage
 	// Get the protocol name length
-	buf := make([]byte, 1)
-	log.Println("Waiting to readfull")
-	_, err := io.ReadFull(c, buf)
+	handshake, err := structure.NewHandshake(c)
 	if err != nil {
-		log.Println("[HandleConnection] Error: ", err)
-		return err
-	}
-	pstrLen := int(buf[0])
-
-	// Get the rest of the handshake message
-	buf = make([]byte, pstrLen+48)
-	_, err = io.ReadFull(c, buf)
-	if err != nil {
-		// Fewer bytes than expected?
-		log.Println("[HandleConnection] Error: ", err)
 		return err
 	}
 
-	name := string(buf[0:pstrLen])
-	if name != "BitTorrent protocol" {
-		log.Println("[HandleConnection] Not BitTorrent protocol handshake")
-		return errors.New("Not BitTorrent protocol handshake")
-	}
-
-	// Parse fields out of the message
-	handshake := &Handshake{
-		Length:            byte(pstrLen),
-		Name:              string(buf[0:pstrLen]),
-		ReservedExtension: buf[pstrLen : pstrLen+8],
-		Hash:              buf[pstrLen+8 : pstrLen+8+20],
-		PeerID:            buf[pstrLen+8+20 : pstrLen+8+20+20],
-	}
-
-	log.Printf("[HandleConnection] Handshake: %q", buf)
+	//	log.Printf("[HandleConnection] Handshake: %q", buf)
 	log.Printf("%q", handshake)
 
 	return nil
