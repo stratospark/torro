@@ -53,7 +53,7 @@ func TestMessages(t *testing.T) {
 		{"\x00\x00\x00\x01\x03",
 			&BasicMessage{Type: MessageTypeNotInterested, Length: 1}},
 		{"\x00\x00\x00\x05\x04\x00\x00\x18\xa4",
-			&BasicMessage{Type: MessageTypeHave, Length: 5, Payload: []byte("\x00\x00\x18\xa4")}},
+			&HaveMessage{BasicMessage: BasicMessage{Type: MessageTypeHave, Length: 5, Payload: []byte("\x00\x00\x18\xa4")}, PieceIndex: 6308}},
 	}
 
 	for _, sm := range smTests {

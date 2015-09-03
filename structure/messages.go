@@ -98,7 +98,12 @@ type BasicMessage struct {
 	Payload []byte
 }
 
-func (m *BasicMessage) Bytes() []byte {
+type HaveMessage struct {
+	BasicMessage
+	PieceIndex int
+}
+
+func (m BasicMessage) Bytes() []byte {
 	bs := make([]byte, 0)
 	buf := bytes.NewBuffer(bs)
 
@@ -108,6 +113,10 @@ func (m *BasicMessage) Bytes() []byte {
 
 	buf.Write([]byte{byte(m.Type)})
 	return buf.Bytes()
+}
+
+func (m HaveMessage) Bytes() []byte {
+	return []byte("\x99")
 }
 
 func ReadMessage(r Reader) (m Message, err error) {
@@ -134,7 +143,13 @@ func ReadMessage(r Reader) (m Message, err error) {
 
 	if mLen > 1 {
 		mPayload := buf[1:mLen]
-		m = &BasicMessage{Length: mLen, Type: mType, Payload: mPayload}
+		switch mType {
+		case MessageTypeHave:
+			pi := int(binary.BigEndian.Uint32(mPayload))
+			m = &HaveMessage{BasicMessage: BasicMessage{Length: mLen, Type: mType, Payload: mPayload}, PieceIndex: pi}
+		default:
+			m = &BasicMessage{Length: mLen, Type: mType, Payload: mPayload}
+		}
 	} else {
 		m = &BasicMessage{Length: mLen, Type: mType}
 	}
