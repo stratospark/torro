@@ -41,6 +41,8 @@ type StringMessageTest struct {
 
 func TestMessages(t *testing.T) {
 
+	bf := BitFieldFromHexString("\xff\xff\xff\x01")
+
 	smTests := []StringMessageTest{
 		{"\x00\x00\x00\x00",
 			&BasicMessage{Type: MessageTypeKeepAlive, Length: 0}},
@@ -54,8 +56,8 @@ func TestMessages(t *testing.T) {
 			&BasicMessage{Type: MessageTypeNotInterested, Length: 1}},
 		{"\x00\x00\x00\x05\x04\x00\x00\x18\xa4",
 			&HaveMessage{BasicMessage: BasicMessage{Type: MessageTypeHave, Length: 5, Payload: []byte("\x00\x00\x18\xa4")}, PieceIndex: 6308}},
-		//		{"\x00\x00\x00\x05\x05\xff\xff\xff\x01",
-		//			&BitfieldMessage{BasicMessage: BasicMessage{Type: MessageTypeBitfield, Length: 5, Payload: []byte("\xff\xff\xff\xff")}, Bitfield: []byte()}},
+		{"\x00\x00\x00\x05\x05\xff\xff\xff\x01",
+			&BitFieldMessage{BasicMessage: BasicMessage{Type: MessageTypeBitField, Length: 5, Payload: []byte("\xff\xff\xff\x01")}, BitField: bf}},
 	}
 
 	for _, sm := range smTests {
@@ -66,7 +68,6 @@ func TestMessages(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(m, ShouldResemble, sm.Message)
 		})
-
 	}
 
 	Convey("Convert an 'Interested' message to bytes", t, func() {
