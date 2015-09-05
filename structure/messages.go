@@ -161,20 +161,21 @@ func ReadMessage(r Reader) (m Message, err error) {
 
 	if mLen > 1 {
 		mPayload := buf[1:mLen]
+		bm := BasicMessage{Length: mLen, Type: mType, Payload: mPayload}
 		switch mType {
 		case MessageTypeHave:
 			pi := int(binary.BigEndian.Uint32(mPayload))
-			m = &HaveMessage{BasicMessage: BasicMessage{Length: mLen, Type: mType, Payload: mPayload}, PieceIndex: pi}
+			m = &HaveMessage{BasicMessage: bm, PieceIndex: pi}
 		case MessageTypeBitField:
 			bf := BitFieldFromHexString(string(mPayload))
-			m = &BitFieldMessage{BasicMessage: BasicMessage{Length: mLen, Type: mType, Payload: mPayload}, BitField: bf}
+			m = &BitFieldMessage{BasicMessage: bm, BitField: bf}
 		case MessageTypeRequest:
 			pieceIndex := int(binary.BigEndian.Uint32(mPayload[0:4]))
 			beginOffset := int(binary.BigEndian.Uint32(mPayload[4:8]))
 			pieceLength := int(binary.BigEndian.Uint32(mPayload[8:12]))
-			m = &RequestMessage{BasicMessage: BasicMessage{Length: mLen, Type: mType, Payload: mPayload}, PieceIndex: pieceIndex, BeginOffset: beginOffset, PieceLength: pieceLength}
+			m = &RequestMessage{BasicMessage: bm, PieceIndex: pieceIndex, BeginOffset: beginOffset, PieceLength: pieceLength}
 		default:
-			m = &BasicMessage{Length: mLen, Type: mType, Payload: mPayload}
+			m = &bm
 		}
 	} else {
 		m = &BasicMessage{Length: mLen, Type: mType}
