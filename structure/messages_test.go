@@ -2,6 +2,7 @@ package structure
 
 import (
 	"bytes"
+	"fmt"
 	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 )
@@ -35,6 +36,7 @@ func TestHandshake(t *testing.T) {
 }
 
 type StringMessageTest struct {
+	Desc    string
 	String  string
 	Message Message
 }
@@ -44,31 +46,35 @@ func TestMessages(t *testing.T) {
 	bf := BitFieldFromHexString("\xff\xff\xff\x01")
 
 	smTests := []StringMessageTest{
-		{"\x00\x00\x00\x00",
+		{"KeepAlive", "\x00\x00\x00\x00",
 			&BasicMessage{Type: MessageTypeKeepAlive, Length: 0}},
-		{"\x00\x00\x00\x01\x00",
+		{"Choke", "\x00\x00\x00\x01\x00",
 			&BasicMessage{Type: MessageTypeChoke, Length: 1}},
-		{"\x00\x00\x00\x01\x01",
+		{"Unchoke", "\x00\x00\x00\x01\x01",
 			&BasicMessage{Type: MessageTypeUnchoke, Length: 1}},
-		{"\x00\x00\x00\x01\x02",
+		{"Interested", "\x00\x00\x00\x01\x02",
 			&BasicMessage{Type: MessageTypeInterested, Length: 1}},
-		{"\x00\x00\x00\x01\x03",
+		{"NotInterested", "\x00\x00\x00\x01\x03",
 			&BasicMessage{Type: MessageTypeNotInterested, Length: 1}},
-		{"\x00\x00\x00\x05\x04\x00\x00\x18\xa4",
+		{"Have", "\x00\x00\x00\x05\x04\x00\x00\x18\xa4",
 			&HaveMessage{BasicMessage: BasicMessage{Type: MessageTypeHave, Length: 5, Payload: []byte("\x00\x00\x18\xa4")}, PieceIndex: 6308}},
-		{"\x00\x00\x00\x05\x05\xff\xff\xff\x01",
+		{"BitField", "\x00\x00\x00\x05\x05\xff\xff\xff\x01",
 			&BitFieldMessage{BasicMessage: BasicMessage{Type: MessageTypeBitField, Length: 5, Payload: []byte("\xff\xff\xff\x01")}, BitField: bf}},
+		{"Request", "\x00\x00\x00\x0d\x06\x00\x00\x0b\xb0\x00\x02\x40\x00\x00\x00\x40\x00",
+			&RequestMessage{BasicMessage: BasicMessage{Type: MessageTypeRequest, Length: 13, Payload: []byte("\x00\x00\x0b\xb0\x00\x02\x40\x00\x00\x00\x40\x00")}, PieceIndex: 0x00000bb0, BeginOffset: 0x00024000, PieceLength: 0x00004000}},
 	}
 
-	for _, sm := range smTests {
-		Convey("Parse an 'Interested' message from bytes", t, func() {
-			br := bytes.NewReader([]byte(sm.String))
-			m, err := ReadMessage(br)
-			So(m, ShouldNotBeNil)
-			So(err, ShouldBeNil)
-			So(m, ShouldResemble, sm.Message)
-		})
-	}
+	Convey("Parsing messages from bytes", t, func() {
+		for _, sm := range smTests {
+			Convey(fmt.Sprintf("%s Message", sm.Desc), func() {
+				br := bytes.NewReader([]byte(sm.String))
+				m, err := ReadMessage(br)
+				So(m, ShouldNotBeNil)
+				So(err, ShouldBeNil)
+				So(m, ShouldResemble, sm.Message)
+			})
+		}
+	})
 
 	Convey("Convert an 'Interested' message to bytes", t, func() {
 		m := &BasicMessage{Length: 1, Type: MessageTypeInterested}

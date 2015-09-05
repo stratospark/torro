@@ -87,6 +87,7 @@ const (
 	MessageTypeNotInterested MessageType = 3
 	MessageTypeHave          MessageType = 4
 	MessageTypeBitField      MessageType = 5
+	MessageTypeRequest       MessageType = 6
 )
 
 type Message interface {
@@ -107,6 +108,13 @@ type HaveMessage struct {
 type BitFieldMessage struct {
 	BasicMessage
 	BitField *BitField
+}
+
+type RequestMessage struct {
+	BasicMessage
+	PieceIndex  int
+	BeginOffset int
+	PieceLength int
 }
 
 func (m BasicMessage) Bytes() []byte {
@@ -160,6 +168,11 @@ func ReadMessage(r Reader) (m Message, err error) {
 		case MessageTypeBitField:
 			bf := BitFieldFromHexString(string(mPayload))
 			m = &BitFieldMessage{BasicMessage: BasicMessage{Length: mLen, Type: mType, Payload: mPayload}, BitField: bf}
+		case MessageTypeRequest:
+			pieceIndex := int(binary.BigEndian.Uint32(mPayload[0:4]))
+			beginOffset := int(binary.BigEndian.Uint32(mPayload[4:8]))
+			pieceLength := int(binary.BigEndian.Uint32(mPayload[8:12]))
+			m = &RequestMessage{BasicMessage: BasicMessage{Length: mLen, Type: mType, Payload: mPayload}, PieceIndex: pieceIndex, BeginOffset: beginOffset, PieceLength: pieceLength}
 		default:
 			m = &BasicMessage{Length: mLen, Type: mType, Payload: mPayload}
 		}
