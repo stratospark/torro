@@ -88,6 +88,7 @@ const (
 	MessageTypeHave          MessageType = 4
 	MessageTypeBitField      MessageType = 5
 	MessageTypeRequest       MessageType = 6
+	MessageTypePiece         MessageType = 7
 )
 
 type Message interface {
@@ -115,6 +116,13 @@ type RequestMessage struct {
 	PieceIndex  int
 	BeginOffset int
 	PieceLength int
+}
+
+type PieceMessage struct {
+	BasicMessage
+	PieceIndex  int
+	BeginOffset int
+	Block       []byte
 }
 
 func (m BasicMessage) Bytes() []byte {
@@ -174,6 +182,11 @@ func ReadMessage(r Reader) (m Message, err error) {
 			beginOffset := int(binary.BigEndian.Uint32(mPayload[4:8]))
 			pieceLength := int(binary.BigEndian.Uint32(mPayload[8:12]))
 			m = &RequestMessage{BasicMessage: bm, PieceIndex: pieceIndex, BeginOffset: beginOffset, PieceLength: pieceLength}
+		case MessageTypePiece:
+			pieceIndex := int(binary.BigEndian.Uint32(mPayload[0:4]))
+			beginOffset := int(binary.BigEndian.Uint32(mPayload[4:8]))
+			block := mPayload[8:]
+			m = &PieceMessage{BasicMessage: bm, PieceIndex: pieceIndex, BeginOffset: beginOffset, Block: block}
 		default:
 			m = &bm
 		}

@@ -62,6 +62,8 @@ func TestMessages(t *testing.T) {
 			&BitFieldMessage{BasicMessage: BasicMessage{Type: MessageTypeBitField, Length: 5, Payload: []byte("\xff\xff\xff\x01")}, BitField: bf}},
 		{"Request", "\x00\x00\x00\x0d\x06\x00\x00\x0b\xb0\x00\x02\x40\x00\x00\x00\x40\x00",
 			&RequestMessage{BasicMessage: BasicMessage{Type: MessageTypeRequest, Length: 13, Payload: []byte("\x00\x00\x0b\xb0\x00\x02\x40\x00\x00\x00\x40\x00")}, PieceIndex: 0x00000bb0, BeginOffset: 0x00024000, PieceLength: 0x00004000}},
+		{"Piece", "\x00\x00\x00\x0d\x07\x00\x00\x05\x2d\x00\x02\x80\x00\x11\x11\x11\x11",
+			&PieceMessage{BasicMessage: BasicMessage{Type: MessageTypePiece, Length: 13, Payload: []byte("\x00\x00\x05\x2d\x00\x02\x80\x00\x11\x11\x11\x11")}, PieceIndex: 0x0000052d, BeginOffset: 0x00028000, Block: []byte("\x11\x11\x11\x11")}},
 	}
 
 	Convey("Parsing messages from bytes", t, func() {
