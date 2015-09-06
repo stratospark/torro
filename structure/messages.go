@@ -147,16 +147,15 @@ func (m BasicMessage) Bytes() []byte {
 	binary.BigEndian.PutUint32(lenBytes, uint32(m.Length))
 	buf.Write(lenBytes)
 
-	buf.Write([]byte{byte(m.Type)})
+	if m.Type != MessageTypeKeepAlive {
+		buf.Write([]byte{byte(m.Type)})
+	}
+
+	if len(m.Payload) > 0 {
+		buf.Write(m.Payload)
+	}
+
 	return buf.Bytes()
-}
-
-func (m HaveMessage) Bytes() []byte {
-	return []byte("\x99")
-}
-
-func (m BitFieldMessage) Bytes() []byte {
-	return []byte("\x99")
 }
 
 func ReadMessage(r Reader) (m Message, err error) {
