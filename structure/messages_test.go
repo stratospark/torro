@@ -64,6 +64,8 @@ func TestMessages(t *testing.T) {
 			&RequestMessage{BasicMessage: BasicMessage{Type: MessageTypeRequest, Length: 13, Payload: []byte("\x00\x00\x0b\xb0\x00\x02\x40\x00\x00\x00\x40\x00")}, PieceIndex: 0x00000bb0, BeginOffset: 0x00024000, PieceLength: 0x00004000}},
 		{"Piece", "\x00\x00\x00\x0d\x07\x00\x00\x05\x2d\x00\x02\x80\x00\x11\x11\x11\x11",
 			&PieceMessage{BasicMessage: BasicMessage{Type: MessageTypePiece, Length: 13, Payload: []byte("\x00\x00\x05\x2d\x00\x02\x80\x00\x11\x11\x11\x11")}, PieceIndex: 0x0000052d, BeginOffset: 0x00028000, Block: []byte("\x11\x11\x11\x11")}},
+		{"Cancel", "\x00\x00\x00\x0d\x08\x00\x00\x05\x2d\x00\x02\x80\x00\x00\x00\x40\x00",
+			&CancelMessage{BasicMessage: BasicMessage{Type: MessageTypeCancel, Length: 13, Payload: []byte("\x00\x00\x05\x2d\x00\x02\x80\x00\x00\x00\x40\x00")}, PieceIndex: 0x0000052d, BeginOffset: 0x00028000, PieceLength: 0x00004000}},
 	}
 
 	Convey("Parsing messages from bytes", t, func() {
