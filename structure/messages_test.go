@@ -90,10 +90,4 @@ func TestMessages(t *testing.T) {
 			})
 		}
 	})
-	//	Convey("Convert an 'Interested' message to bytes", t, func() {
-	//		m := &BasicMessage{Length: 1, Type: MessageTypeInterested}
-	//		b := m.Bytes()
-	//		msg := "\x00\x00\x00\x01\x02"
-	//		So(b, ShouldResemble, []byte(msg))
-	//	})
 }

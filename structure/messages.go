@@ -13,6 +13,10 @@ var (
 	ErrNotBitTorrentProtocol error = errors.New("Not BitTorrentProtocol")
 )
 
+type Reader interface {
+	Read(p []byte) (n int, err error)
+}
+
 type Handshake struct {
 	Length            byte
 	Name              string
@@ -25,10 +29,10 @@ func (h *Handshake) String() string {
 	return fmt.Sprintf("pstrlen: %d, name: %s, reserved extension: %x , hash: %x , peer id: %s", h.Length, h.Name, h.ReservedExtension, h.Hash, h.PeerID)
 }
 
-type Reader interface {
-	Read(p []byte) (n int, err error)
-}
-
+/*
+NewHandshake pulls the next message off of the Reader and
+verifies that it conforms to the BitTorrent Protocol.
+*/
 func NewHandshake(r Reader) (h *Handshake, err error) {
 	buf := make([]byte, 1)
 	log.Println("Waiting to readfull")
@@ -66,6 +70,9 @@ func NewHandshake(r Reader) (h *Handshake, err error) {
 	return h, nil
 }
 
+/*
+Bytes serializes the Handshake message to []byte.
+*/
 func (h *Handshake) Bytes() []byte {
 	bs := make([]byte, 0)
 	buf := bytes.NewBuffer(bs)
@@ -139,6 +146,10 @@ type PortMessage struct {
 	Port int
 }
 
+/*
+Bytes converts a message into its []byte representation, useful
+for serializing over the wire.
+*/
 func (m BasicMessage) Bytes() []byte {
 	bs := make([]byte, 0)
 	buf := bytes.NewBuffer(bs)
@@ -158,6 +169,10 @@ func (m BasicMessage) Bytes() []byte {
 	return buf.Bytes()
 }
 
+/*
+ReadMessage reads from a Reader, most likely net.Conn during real operation,
+and decodes the next available message..
+*/
 func ReadMessage(r Reader) (m Message, err error) {
 	buf := make([]byte, 4)
 	log.Println("Waiting to read full")
