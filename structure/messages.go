@@ -33,7 +33,7 @@ func (h *Handshake) String() string {
 NewHandshake pulls the next message off of the Reader and
 verifies that it conforms to the BitTorrent Protocol.
 */
-func NewHandshake(r Reader) (h *Handshake, err error) {
+func ReadHandshake(r Reader) (h *Handshake, err error) {
 	buf := make([]byte, 1)
 	log.Println("Waiting to readfull")
 	_, err = io.ReadFull(r, buf)
