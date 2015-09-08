@@ -2,6 +2,7 @@ package client
 
 import (
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stratospark/torro/structure"
 	"io"
 	"net"
 	"testing"
@@ -9,9 +10,12 @@ import (
 )
 
 func TestHandler(t *testing.T) {
+
+	port := 55555
+	peerId := "-TR2840-nj5ovtkoz2ed8"
+
 	Convey("Listens to incoming connections on a given port", t, func() {
-		port := 55555
-		s := NewBTService(port)
+		s := NewBTService(port, []byte(peerId))
 		s.StartListening()
 
 		time.Sleep(time.Millisecond * 50)
@@ -24,8 +28,8 @@ func TestHandler(t *testing.T) {
 	})
 
 	Convey("Accepts a handshake and adds to the connection list", t, func() {
-		port := 55555
-		s := NewBTService(port)
+		s := NewBTService(port, []byte(peerId))
+		s.AddHash([]byte("\x6f\xda\xb6\xc1\x9f\x72\x14\x76\xfa\xca\xab\x36\x60\x8a\x87\x7a\x2a\xac\xbf\xc9"))
 		s.StartListening()
 
 		time.Sleep(time.Millisecond * 50)
@@ -40,11 +44,9 @@ func TestHandler(t *testing.T) {
 		conn.Write([]byte(handshake))
 		time.Sleep(time.Millisecond * 50)
 		So(len(s.Peers), ShouldEqual, 1)
-		buf := make([]byte, 4)
-		_, err = io.ReadFull(conn, buf)
-		t.Log(buf)
+		respHandshake, err := structure.ReadHandshake(conn)
 		So(err, ShouldBeNil)
-		So(buf, ShouldResemble, []byte("pong"))
+		So(respHandshake, ShouldNotBeNil)
 
 		_ = s.StopListening()
 		time.Sleep(time.Millisecond * 50)
@@ -52,8 +54,7 @@ func TestHandler(t *testing.T) {
 	})
 
 	Convey("Rejects a malformed handshake request", t, func() {
-		port := 55555
-		s := NewBTService(port)
+		s := NewBTService(port, []byte(peerId))
 		s.StartListening()
 
 		time.Sleep(time.Millisecond * 50)
@@ -68,6 +69,7 @@ func TestHandler(t *testing.T) {
 		conn.Write([]byte(handshake))
 		time.Sleep(time.Millisecond * 50)
 		So(len(s.Peers), ShouldEqual, 0)
+		// TODO: check that peer closed connection
 		buf := make([]byte, 4)
 		_, err = io.ReadFull(conn, buf)
 		So(err, ShouldNotBeNil)

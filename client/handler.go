@@ -18,6 +18,7 @@ type BTConn struct {
 
 type Handler interface {
 	StartListening(chan BTConn, error)
+	AddHash([]byte)
 }
 
 /*
@@ -30,17 +31,21 @@ type BTService struct {
 	CloseCh   chan bool
 	Port      int
 	Peers     map[net.Conn]string
+	Hashes    map[string]bool
+	PeerID    []byte
 }
 
 /*
 NewBTService returns a closed BTService on a specified port.
 */
-func NewBTService(port int) *BTService {
+func NewBTService(port int, peerId []byte) *BTService {
 	s := &BTService{
 		Listening: false,
 		CloseCh:   make(chan bool, 1),
 		Port:      port,
 		Peers:     make(map[net.Conn]string),
+		Hashes:    make(map[string]bool),
+		PeerID:    peerId,
 	}
 	return s
 }
@@ -90,22 +95,36 @@ func (s *BTService) StartListening() (err error) {
 	return nil
 }
 
+func (s *BTService) AddHash(h []byte) {
+	s.Hashes[string(h)] = true
+}
+
 func (s *BTService) handleMessages(hsChan <-chan net.Conn, msgChan <-chan string) {
 	//	peers := make(map[net.Conn]string)
 
 	for {
 		select {
 		case hs := <-hsChan:
-			err := handleHandshake(hs)
+			peerHs, err := handleHandshake(hs)
 			if err != nil {
 				time.Sleep(time.Millisecond * 100)
 				hs.Close()
 			}
 
+			// TODO: check if info has is the same
 			s.Peers[hs] = "added"
 			time.Sleep(time.Millisecond * 100)
 			log.Printf("Writing byte\n")
-			hs.Write([]byte("pong"))
+			respHs, err := structure.NewHandshake(peerHs.Hash, s.PeerID)
+			log.Println("[handleMessages] respHS ", respHs)
+			if err != nil {
+				log.Printf("[handleMessages] %q\n", err.Error())
+				hs.Close()
+				delete(s.Peers, hs)
+				continue
+			}
+			hs.Write(respHs.Bytes())
+			time.Sleep(time.Second)
 			hs.Close()
 			delete(s.Peers, hs)
 		}
@@ -120,18 +139,18 @@ func handleConnection(c net.Conn, hsChan chan<- net.Conn) {
 	return
 }
 
-func handleHandshake(c net.Conn) error {
+func handleHandshake(c net.Conn) (hs *structure.Handshake, err error) {
 	// First connection, assume handshake messsage
 	// Get the protocol name length
-	handshake, err := structure.NewHandshake(c)
+	hs, err = structure.ReadHandshake(c)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	//	log.Printf("[HandleConnection] Handshake: %q", buf)
-	log.Printf("%q", handshake)
+	log.Printf("[handleHandshake] %q", hs)
 
-	return nil
+	return hs, nil
 }
 
 /*

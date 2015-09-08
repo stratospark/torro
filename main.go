@@ -80,7 +80,8 @@ func main() {
 
 	log.Println("StartListening")
 	port := 55555
-	s := client.NewBTService(port)
+	peerId := []byte("-TR2840-nj5ovtkoz2ed8")
+	s := client.NewBTService(port, peerId)
 	s.StartListening()
 
 	switch *pPrint {

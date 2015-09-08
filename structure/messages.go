@@ -29,32 +29,43 @@ func (h *Handshake) String() string {
 	return fmt.Sprintf("pstrlen: %d, name: %s, reserved extension: %x , hash: %x , peer id: %s", h.Length, h.Name, h.ReservedExtension, h.Hash, h.PeerID)
 }
 
+func NewHandshake(hash, peerId []byte) (h *Handshake, err error) {
+	return &Handshake{
+		Length:            19,
+		Name:              "BitTorrent protocol",
+		ReservedExtension: []byte("\x00\x00\x00\x00\x00\x00\x00\x00"),
+		Hash:              hash,
+		PeerID:            peerId,
+	}, nil
+}
+
 /*
-NewHandshake pulls the next message off of the Reader and
+ReadHandshake pulls the next message off of the Reader and
 verifies that it conforms to the BitTorrent Protocol.
 */
 func ReadHandshake(r Reader) (h *Handshake, err error) {
 	buf := make([]byte, 1)
-	log.Println("Waiting to readfull")
 	_, err = io.ReadFull(r, buf)
 	if err != nil {
-		log.Println("[HandleConnection] Error: ", err)
+		log.Println("[ReadHandshake] ReadFull Error: ", err)
 		return nil, err
 	}
 	pstrLen := int(buf[0])
+	log.Println(pstrLen)
 
 	// Get the rest of the handshake message
 	buf = make([]byte, pstrLen+48)
 	_, err = io.ReadFull(r, buf)
 	if err != nil {
 		// Fewer bytes than expected?
-		log.Println("[HandleConnection] Error: ", err)
+		log.Printf("[ReadHandshake] More ReadFull Error: %s, %x, %d", err, buf, len(buf))
 		return nil, err
 	}
 
 	name := string(buf[0:pstrLen])
+	log.Printf(name)
 	if name != "BitTorrent protocol" {
-		log.Println("[HandleConnection] Not BitTorrent protocol handshake")
+		log.Println("[ReadHandshake] Not BitTorrent protocol handshake")
 		return nil, ErrNotBitTorrentProtocol
 	}
 
@@ -66,6 +77,8 @@ func ReadHandshake(r Reader) (h *Handshake, err error) {
 		Hash:              buf[pstrLen+8 : pstrLen+8+20],
 		PeerID:            buf[pstrLen+8+20 : pstrLen+8+20+20],
 	}
+
+	log.Println("[ReadHandshake]: ", h)
 
 	return h, nil
 }
@@ -178,7 +191,7 @@ func ReadMessage(r Reader) (m Message, err error) {
 	log.Println("Waiting to read full")
 	_, err = io.ReadFull(r, buf)
 	if err != nil {
-		log.Println("[HandleConnection] Error: ", err)
+		log.Println("[ReadMessage] Error: ", err)
 		return nil, err
 	}
 	mLen := int(binary.BigEndian.Uint32(buf))
@@ -190,7 +203,7 @@ func ReadMessage(r Reader) (m Message, err error) {
 	buf = make([]byte, mLen)
 	_, err = io.ReadFull(r, buf)
 	if err != nil {
-		log.Println("[HandleConnection] Error: ", err)
+		log.Println("[ReadMessage] Error: ", err)
 		return nil, err
 	}
 	mType := MessageType(buf[0])
