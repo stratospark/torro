@@ -4,15 +4,16 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stratospark/torro/structure"
 	"io"
+	"log"
 	"net"
 	"testing"
 	"time"
 )
 
 func TestHandler(t *testing.T) {
-
 	port := 55555
 	peerId := "-TR2840-nj5ovtkoz2ed8"
+	hash := []byte("\x6f\xda\xb6\xc1\x9f\x72\x14\x76\xfa\xca\xab\x36\x60\x8a\x87\x7a\x2a\xac\xbf\xc9")
 
 	Convey("Listens to incoming connections on a given port", t, func() {
 		s := NewBTService(port, []byte(peerId))
@@ -29,7 +30,7 @@ func TestHandler(t *testing.T) {
 
 	Convey("Accepts a handshake and adds to the connection list", t, func() {
 		s := NewBTService(port, []byte(peerId))
-		s.AddHash([]byte("\x6f\xda\xb6\xc1\x9f\x72\x14\x76\xfa\xca\xab\x36\x60\x8a\x87\x7a\x2a\xac\xbf\xc9"))
+		s.AddHash(hash)
 		s.StartListening()
 
 		time.Sleep(time.Millisecond * 50)
@@ -77,5 +78,26 @@ func TestHandler(t *testing.T) {
 		_ = s.StopListening()
 		time.Sleep(time.Millisecond * 50)
 		So(s.Listening, ShouldBeFalse)
+	})
+
+	Convey("Sends out handshake request to every IP in list", t, func() {
+		t.Log("InitHandshake test")
+		log.Print("InitHandshake test")
+		s := NewBTService(port, []byte(peerId))
+		s.AddHash(hash)
+		s.StartListening()
+
+		time.Sleep(time.Millisecond * 50)
+
+		So(true, ShouldBeTrue)
+		//
+		//		peers := make([]structure.Peer, 2)
+		//		peers[0] = structure.Peer{IP: net.IPv4(192,168,1,1), Port: 44444}
+		//		peers[1] = structure.Peer{IP: net.IPv4(192,168,1,2), Port: 33333}
+		//		s.InitiateHandshakes(hash, peers)
+		//		time.Sleep(time.Millisecond * 50)
+		//		So(len(s.Peers), ShouldEqual, len(peers))
+		_ = s.StopListening()
+		time.Sleep(time.Millisecond * 50)
 	})
 }

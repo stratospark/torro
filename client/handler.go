@@ -99,12 +99,27 @@ func (s *BTService) AddHash(h []byte) {
 	s.Hashes[string(h)] = true
 }
 
+func (s *BTService) InitiateHandshakes(hash []byte, peers []structure.Peer) {
+	for _, peer := range peers {
+		addr := &net.TCPAddr{IP: peer.IP, Port: int(peer.Port)}
+		conn, err := net.DialTCP("tcp", nil, addr)
+		if err != nil {
+			continue
+		}
+		hs, _ := structure.NewHandshake(hash, s.PeerID)
+		conn.Write(hs.Bytes())
+
+		s.Peers[conn] = "added"
+	}
+}
+
 func (s *BTService) handleMessages(hsChan <-chan net.Conn, msgChan <-chan string) {
 	//	peers := make(map[net.Conn]string)
 
 	for {
 		select {
 		case hs := <-hsChan:
+			log.Println("Got message from hsChan")
 			peerHs, err := handleHandshake(hs)
 			if err != nil {
 				time.Sleep(time.Millisecond * 100)
@@ -114,7 +129,7 @@ func (s *BTService) handleMessages(hsChan <-chan net.Conn, msgChan <-chan string
 			// TODO: check if info has is the same
 			s.Peers[hs] = "added"
 			time.Sleep(time.Millisecond * 100)
-			log.Printf("Writing byte\n")
+			log.Printf("Writing byte %q\n", hs)
 			respHs, err := structure.NewHandshake(peerHs.Hash, s.PeerID)
 			log.Println("[handleMessages] respHS ", respHs)
 			if err != nil {
