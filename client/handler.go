@@ -85,6 +85,9 @@ type BTService struct {
 	Listening         bool
 	CloseCh           chan bool
 	TermCh            chan bool
+	HsChan            chan *BTConn
+	MsgChan           chan *BTConn
+	DisconnectChan    chan bool
 	Port              int
 	Peers             map[*BTConn]BTState
 	Hashes            map[string]bool
@@ -100,6 +103,9 @@ func NewBTService(port int, peerId []byte) *BTService {
 		Listening:         false,
 		CloseCh:           make(chan bool, 1),
 		TermCh:            make(chan bool, 1),
+		HsChan:            make(chan *BTConn, 1),
+		MsgChan:           make(chan *BTConn, 1),
+		DisconnectChan:    make(chan bool, 1),
 		Port:              port,
 		Peers:             make(map[*BTConn]BTState),
 		Hashes:            make(map[string]bool),
@@ -121,18 +127,14 @@ func (s *BTService) StartListening() (err error) {
 	s.Listener = l
 	s.Listening = true
 
-	hsChan := make(chan *BTConn, 1)
-	msgChan := make(chan string, 1)
-	disconnectChan := make(chan bool, 1)
-
 	go func() {
-		go s.handleMessages(hsChan, msgChan, disconnectChan)
+		go s.handleMessages()
 
 		for {
 			select {
 			case <-s.CloseCh:
 				log.Println("Closing BitTorrent Service")
-				disconnectChan <- true
+				s.DisconnectChan <- true
 				s.Listener.Close()
 				s.Listening = false
 				return
@@ -149,7 +151,7 @@ func (s *BTService) StartListening() (err error) {
 				continue
 			}
 			log.Println(btc)
-			go handleConnection(btc, hsChan)
+			go handleConnection(btc, s.HsChan)
 		}
 	}()
 
@@ -165,47 +167,54 @@ func (s *BTService) InitiateHandshakes(hash []byte, peers []structure.Peer) {
 		addr := fmt.Sprintf("%q:%d", peer.IP, peer.Port)
 		conn, err := s.ConnectionFetcher.Dial(addr)
 		if err != nil {
+			// TODO: Try more than once before giving up?
 			continue
 		}
 		hs, _ := structure.NewHandshake(hash, s.PeerID)
 		conn.Write(hs.Bytes())
 
 		s.Peers[conn] = BTStateWaitingForHandshake
+
+		//		s.MsgChan <- conn
+
 	}
 }
 
-func (s *BTService) handleMessages(hsChan <-chan *BTConn, msgChan <-chan string, disconnectChan <-chan bool) {
+func (s *BTService) handleMessages() {
 	for {
 		select {
-		case d := <-disconnectChan:
+		case d := <-s.DisconnectChan:
 			if d {
 				for k := range s.Peers {
 					k.Close()
 				}
 			}
 			s.TermCh <- true
-		case hs := <-hsChan:
-			peerHs, err := handleHandshake(hs)
+		case conn := <-s.HsChan:
+			peerHs, err := handleHandshake(conn)
 			if err != nil {
-				hs.Close()
-				delete(s.Peers, hs)
+				conn.Close()
+				delete(s.Peers, conn)
 				continue
 			}
 
 			// TODO: check if info has is the same
-			log.Printf("Writing byte %q\n", hs)
+			log.Printf("Writing byte %q\n", conn)
 			respHs, err := structure.NewHandshake(peerHs.Hash, s.PeerID)
 			log.Println("[handleMessages] respHS ", respHs)
 			if err != nil {
 				log.Printf("[handleMessages] %q\n", err.Error())
-				hs.Close()
+				conn.Close()
 				continue
 			}
-			s.Peers[hs] = BTStateReadyForMessages
-			hs.Write(respHs.Bytes())
+			s.Peers[conn] = BTStateReadyForMessages
+			conn.Write(respHs.Bytes())
+			s.MsgChan <- conn
+		case conn := <-s.MsgChan:
+			log.Printf("Reading Message from: %q", conn)
 			time.Sleep(time.Millisecond * 100) // TODO: get rid of this sleep
-			hs.Close()
-			delete(s.Peers, hs)
+			conn.Close()
+			delete(s.Peers, conn)
 		}
 	}
 }
