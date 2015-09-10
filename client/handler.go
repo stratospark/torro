@@ -173,6 +173,7 @@ func (s *BTService) InitiateHandshakes(hash []byte, peers []structure.Peer) {
 		}
 		hs, _ := structure.NewHandshake(hash, s.PeerID)
 		conn.Write(hs.Bytes())
+		conn.Hash = string(hash)
 
 		s.Peers[conn] = BTStateWaitingForHandshake
 
@@ -193,6 +194,7 @@ func (s *BTService) handleMessages() {
 		case conn := <-s.HsChan:
 			peerHs, err := handleHandshake(conn)
 			if err != nil {
+				log.Printf("[handleMessages] error: %q", err.Error())
 				conn.Close()
 				delete(s.Peers, conn)
 				continue
@@ -200,7 +202,9 @@ func (s *BTService) handleMessages() {
 
 			_, ok := s.Peers[conn]
 			if ok {
+				log.Printf("%q === %q?", conn.Hash, string(peerHs.Hash))
 				if conn.Hash != string(peerHs.Hash) {
+					// TODO: What if same connection is handling multiple hashes?
 					log.Printf("[handleMessages] hash mismatch\n")
 					conn.Close()
 					delete(s.Peers, conn)
@@ -242,6 +246,7 @@ func handleHandshake(c *BTConn) (hs *structure.Handshake, err error) {
 	// Get the protocol name length
 	hs, err = structure.ReadHandshake(c)
 	if err != nil {
+		log.Printf("[handleHandshake] error: %q", err.Error())
 		return nil, err
 	}
 

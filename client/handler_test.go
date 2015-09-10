@@ -1,6 +1,7 @@
 package client
 
 import (
+	"github.com/oleiade/lane"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stratospark/torro/structure"
 	"io"
@@ -10,18 +11,25 @@ import (
 	"time"
 )
 
-type MockConnection struct{}
+type MockConnection struct {
+	Stack *lane.Stack
+}
 
 func (c *MockConnection) Read(b []byte) (n int, err error) {
-	log.Printf("MockConnection Read: %q\n", b)
-	b = []byte("read")
-	return 4, nil
+	read := c.Stack.Pop().([]byte)
+	log.Printf("MockConnection Read: %q\n", read)
+	for i := 0; i < len(b); i++ {
+		b[i] = read[i]
+	}
+	c.Stack.Push(read[len(b):])
+	return len(b), err
 }
 
 func (c *MockConnection) Write(b []byte) (n int, err error) {
 	log.Printf("MockConnection Write: %q\n", b)
-	b = []byte("write")
-	return 4, nil
+	c.Stack.Push(b)
+	log.Printf("%d", c.Stack.Size())
+	return len(b), nil
 }
 
 func (c *MockConnection) Close() error {
@@ -31,7 +39,7 @@ func (c *MockConnection) Close() error {
 type MockConnectionFetcher struct{}
 
 func (t *MockConnectionFetcher) Dial(addr string) (*BTConn, error) {
-	conn := &MockConnection{}
+	conn := &MockConnection{Stack: lane.NewStack()}
 	return &BTConn{Conn: conn}, nil
 }
 
