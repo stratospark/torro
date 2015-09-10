@@ -24,6 +24,7 @@ connection to a Peer according to the BitTorrent protocol.
 */
 type BTConn struct {
 	Conn   Connection
+	Hash   string
 	PeerID string
 }
 
@@ -175,8 +176,7 @@ func (s *BTService) InitiateHandshakes(hash []byte, peers []structure.Peer) {
 
 		s.Peers[conn] = BTStateWaitingForHandshake
 
-		//		s.MsgChan <- conn
-
+		s.HsChan <- conn
 	}
 }
 
@@ -198,17 +198,27 @@ func (s *BTService) handleMessages() {
 				continue
 			}
 
-			// TODO: check if info has is the same
-			log.Printf("Writing byte %q\n", conn)
-			respHs, err := structure.NewHandshake(peerHs.Hash, s.PeerID)
-			log.Println("[handleMessages] respHS ", respHs)
-			if err != nil {
-				log.Printf("[handleMessages] %q\n", err.Error())
-				conn.Close()
-				continue
+			_, ok := s.Peers[conn]
+			if ok {
+				if conn.Hash != string(peerHs.Hash) {
+					log.Printf("[handleMessages] hash mismatch\n")
+					conn.Close()
+					delete(s.Peers, conn)
+					continue
+				}
+			} else {
+				log.Printf("Writing byte %q\n", conn)
+				respHs, err := structure.NewHandshake(peerHs.Hash, s.PeerID)
+				log.Println("[handleMessages] respHS ", respHs)
+				if err != nil {
+					log.Printf("[handleMessages] %q\n", err.Error())
+					conn.Close()
+					continue
+				}
+				conn.Write(respHs.Bytes())
 			}
+
 			s.Peers[conn] = BTStateReadyForMessages
-			conn.Write(respHs.Bytes())
 			s.MsgChan <- conn
 		case conn := <-s.MsgChan:
 			log.Printf("Reading Message from: %q", conn)
