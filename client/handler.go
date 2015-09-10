@@ -68,6 +68,13 @@ type Handler interface {
 	AddHash([]byte)
 }
 
+type BTState int
+
+const (
+	BTStateWaitingForHandshake BTState = iota
+	BTStateReadyForMessages
+)
+
 /*
 BTService is a wrapper around a TCPListener, along with
 other state information.
@@ -79,7 +86,7 @@ type BTService struct {
 	CloseCh           chan bool
 	TermCh            chan bool
 	Port              int
-	Peers             map[*BTConn]string
+	Peers             map[*BTConn]BTState
 	Hashes            map[string]bool
 	PeerID            []byte
 }
@@ -94,7 +101,7 @@ func NewBTService(port int, peerId []byte) *BTService {
 		CloseCh:           make(chan bool, 1),
 		TermCh:            make(chan bool, 1),
 		Port:              port,
-		Peers:             make(map[*BTConn]string),
+		Peers:             make(map[*BTConn]BTState),
 		Hashes:            make(map[string]bool),
 		PeerID:            peerId,
 	}
@@ -163,7 +170,7 @@ func (s *BTService) InitiateHandshakes(hash []byte, peers []structure.Peer) {
 		hs, _ := structure.NewHandshake(hash, s.PeerID)
 		conn.Write(hs.Bytes())
 
-		s.Peers[conn] = "added"
+		s.Peers[conn] = BTStateWaitingForHandshake
 	}
 }
 
@@ -186,19 +193,17 @@ func (s *BTService) handleMessages(hsChan <-chan *BTConn, msgChan <-chan string,
 			}
 
 			// TODO: check if info has is the same
-			s.Peers[hs] = "added"
-			time.Sleep(time.Millisecond * 100)
 			log.Printf("Writing byte %q\n", hs)
 			respHs, err := structure.NewHandshake(peerHs.Hash, s.PeerID)
 			log.Println("[handleMessages] respHS ", respHs)
 			if err != nil {
 				log.Printf("[handleMessages] %q\n", err.Error())
 				hs.Close()
-				delete(s.Peers, hs)
 				continue
 			}
+			s.Peers[hs] = BTStateReadyForMessages
 			hs.Write(respHs.Bytes())
-			time.Sleep(time.Second)
+			time.Sleep(time.Millisecond * 100) // TODO: get rid of this sleep
 			hs.Close()
 			delete(s.Peers, hs)
 		}
