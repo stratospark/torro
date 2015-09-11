@@ -23,25 +23,20 @@ func (c *MockConnection) SendHandshake(hs *structure.Handshake) {
 }
 
 func (c *MockConnection) Read(b []byte) (n int, err error) {
+	readBytes := func(read []byte) {
+		for i := 0; i < len(b); i++ {
+			b[i] = read[i]
+		}
+		if len(b) < len(read) {
+			c.RestOfMessageChan <- read[len(b):]
+		}
+	}
 	select {
 	case read := <-c.RestOfMessageChan:
-		log.Printf("MockConnection Read, RestOfMessage: %q\n", read)
-		for i := 0; i < len(b); i++ {
-			b[i] = read[i]
-		}
-		if len(b) < len(read) {
-			c.RestOfMessageChan <- read[len(b):]
-		}
+		readBytes(read)
 	case hs := <-c.SendHandshakeChan:
 		read := hs.Bytes()
-		log.Printf("MockConnection Read, Handshake: %q\n", read)
-		for i := 0; i < len(b); i++ {
-			b[i] = read[i]
-		}
-		log.Println(len(b), len(read))
-		if len(b) < len(read) {
-			c.RestOfMessageChan <- read[len(b):]
-		}
+		readBytes(read)
 	}
 
 	return len(b), err
