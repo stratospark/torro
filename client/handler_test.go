@@ -83,12 +83,14 @@ func (t *MockConnectionFetcher) Dial(addr string) (*BTConn, error) {
 	return btc, nil
 }
 
-func TestHandler(t *testing.T) {
-	port := 55555
-	peerIdRemote := "-TR2840-nj5ovtREMOTE"
-	peerIdClient := "-TR2840-nj5ovtCLIENT"
-	hash := []byte("\x6f\xda\xb6\xc1\x9f\x72\x14\x76\xfa\xca\xab\x36\x60\x8a\x87\x7a\x2a\xac\xbf\xc9")
+var (
+	port         int    = 55555
+	peerIdRemote string = "-TR2840-nj5ovtREMOTE"
+	peerIdClient string = "-TR2840-nj5ovtCLIENT"
+	hash         []byte = []byte("\x6f\xda\xb6\xc1\x9f\x72\x14\x76\xfa\xca\xab\x36\x60\x8a\x87\x7a\x2a\xac\xbf\xc9")
+)
 
+func TestListen(t *testing.T) {
 	Convey("Listens to incoming connections on a given port", t, func() {
 		s := NewBTService(port, []byte(peerIdRemote))
 		s.StartListening()
@@ -101,6 +103,9 @@ func TestHandler(t *testing.T) {
 		So(s.Listening, ShouldBeFalse)
 	})
 
+}
+
+func TestAcceptHandshake(t *testing.T) {
 	Convey("Accepts a handshake and adds to the connection list", t, func() {
 		s := NewBTService(port, []byte(peerIdRemote))
 		s.AddHash(hash)
@@ -125,7 +130,9 @@ func TestHandler(t *testing.T) {
 		_ = s.StopListening()
 		So(s.Listening, ShouldBeFalse)
 	})
+}
 
+func TestRejectHandshake(t *testing.T) {
 	Convey("Rejects a malformed handshake request", t, func() {
 		s := NewBTService(port, []byte(peerIdRemote))
 		s.StartListening()
@@ -149,7 +156,9 @@ func TestHandler(t *testing.T) {
 		_ = s.StopListening()
 		So(s.Listening, ShouldBeFalse)
 	})
+}
 
+func TestInitiateHandshakes(t *testing.T) {
 	Convey("Sends out handshake request to every IP in list", t, func() {
 		s := NewBTService(port, []byte(peerIdRemote))
 		mc := NewMockConnectionFetcher()
@@ -180,7 +189,9 @@ func TestHandler(t *testing.T) {
 		_ = s.StopListening()
 		So(s.Listening, ShouldBeFalse)
 	})
+}
 
+func TestConversation(t *testing.T) {
 	Convey("Receives Bitfield message and sends Interested message", t, func() {
 		s := NewBTService(port, []byte(peerIdRemote))
 		mc := NewMockConnectionFetcher()
@@ -207,6 +218,10 @@ func TestHandler(t *testing.T) {
 			bf := structure.BitFieldFromHexString("\xff\xff\xff\x01")
 			msg := &structure.BitFieldMessage{BasicMessage: structure.BasicMessage{Type: structure.MessageTypeBitField, Length: 5, Payload: []byte("\xff\xff\xff\x01")}, BitField: bf}
 			c0.SendMessage(msg)
+
+			//			m, err := structure.ReadMessage(bytes.NewReader(<-c0.ReceiveBytesChan))
+			//			So(m, ShouldNotBeNil)
+			//			So(err, ShouldBeNil)
 		}
 
 		time.Sleep(time.Millisecond * 50)
