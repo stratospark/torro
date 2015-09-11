@@ -110,7 +110,7 @@ func TestHandler(t *testing.T) {
 	})
 
 	Convey("Sends out handshake request to every IP in list", t, func() {
-		t.Log("InitHandshake test")
+		log.Println("----------------------")
 		s := NewBTService(port, []byte(peerId))
 		s.ConnectionFetcher = &MockConnectionFetcher{}
 		s.AddHash(hash)
@@ -125,6 +125,7 @@ func TestHandler(t *testing.T) {
 		peers[0] = structure.Peer{IP: net.IPv4(192, 168, 1, 1), Port: 55556}
 		peers[1] = structure.Peer{IP: net.IPv4(192, 168, 1, 2), Port: 55557}
 		s.InitiateHandshakes(hash, peers)
+		time.Sleep(time.Millisecond * 50)
 		So(len(s.Peers), ShouldEqual, len(peers))
 
 		_ = s.StopListening()

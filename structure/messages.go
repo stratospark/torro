@@ -50,9 +50,7 @@ func ReadHandshake(r Reader) (h *Handshake, err error) {
 		log.Println("[ReadHandshake] ReadFull Error: ", err)
 		return nil, err
 	}
-	log.Println(buf)
 	pstrLen := int(buf[0])
-	log.Println("[ReadHanshake] pstrLen: ", pstrLen)
 
 	// Get the rest of the handshake message
 	buf = make([]byte, pstrLen+48)
@@ -64,7 +62,6 @@ func ReadHandshake(r Reader) (h *Handshake, err error) {
 	}
 
 	name := string(buf[0:pstrLen])
-	log.Printf(name)
 	if name != "BitTorrent protocol" {
 		log.Println("[ReadHandshake] Not BitTorrent protocol handshake")
 		return nil, ErrNotBitTorrentProtocol
