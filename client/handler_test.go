@@ -13,7 +13,7 @@ import (
 
 type MockConnection struct {
 	SendHandshakeChan chan *structure.Handshake
-	SendMessageChan   chan *structure.Message
+	SendMessageChan   chan structure.Message
 	RestOfMessageChan chan []byte
 	ReceiveBytesChan  chan []byte
 }
@@ -22,8 +22,13 @@ func (c *MockConnection) SendHandshake(hs *structure.Handshake) {
 	c.SendHandshakeChan <- hs
 }
 
+func (c *MockConnection) SendMessage(m structure.Message) {
+	c.SendMessageChan <- m
+}
+
 func (c *MockConnection) Read(b []byte) (n int, err error) {
 	readBytes := func(read []byte) {
+		log.Printf("MockConnection Read: %q, len(read): %d, len(b): %d\n", read, len(read), len(b))
 		for i := 0; i < len(b); i++ {
 			b[i] = read[i]
 		}
@@ -36,6 +41,9 @@ func (c *MockConnection) Read(b []byte) (n int, err error) {
 		readBytes(read)
 	case hs := <-c.SendHandshakeChan:
 		read := hs.Bytes()
+		readBytes(read)
+	case m := <-c.SendMessageChan:
+		read := m.Bytes()
 		readBytes(read)
 	}
 
@@ -65,7 +73,7 @@ func NewMockConnectionFetcher() *MockConnectionFetcher {
 func (t *MockConnectionFetcher) Dial(addr string) (*BTConn, error) {
 	conn := &MockConnection{
 		SendHandshakeChan: make(chan *structure.Handshake, 1),
-		SendMessageChan:   make(chan *structure.Message, 1),
+		SendMessageChan:   make(chan structure.Message, 1),
 		RestOfMessageChan: make(chan []byte, 1),
 		ReceiveBytesChan:  make(chan []byte, 1),
 	}
@@ -77,8 +85,8 @@ func (t *MockConnectionFetcher) Dial(addr string) (*BTConn, error) {
 
 func TestHandler(t *testing.T) {
 	port := 55555
-	peerIdRemote := "-TR2840-nj5ovtkREMOTE"
-	peerIdClient := "-TR2840-nj5ovtkCLIENT"
+	peerIdRemote := "-TR2840-nj5ovtREMOTE"
+	peerIdClient := "-TR2840-nj5ovtCLIENT"
 	hash := []byte("\x6f\xda\xb6\xc1\x9f\x72\x14\x76\xfa\xca\xab\x36\x60\x8a\x87\x7a\x2a\xac\xbf\xc9")
 
 	Convey("Listens to incoming connections on a given port", t, func() {
@@ -172,25 +180,37 @@ func TestHandler(t *testing.T) {
 		_ = s.StopListening()
 		So(s.Listening, ShouldBeFalse)
 	})
-	//
-	//	Convey("Receives Bitfield message and sends Interested message", t, func() {
-	//		s := NewBTService(port, []byte(peerIdRemote))
-	//		mc := NewMockConnectionFetcher()
-	//		s.ConnectionFetcher = mc
-	//		s.AddHash(hash)
-	//		s.StartListening()
-	//
-	//		time.Sleep(time.Millisecond * 50)
-	//
-	//		peers := make([]structure.Peer, 1)
-	//		peers[0] = structure.Peer{IP: net.IPv4(192, 168, 1, 1), Port: 55556}
-	//		s.InitiateHandshakes(hash, peers)
-	//		time.Sleep(time.Millisecond * 50)
-	//
-	//		c0 := mc.Conns[peers[0].String()]
-	//		c0.SendHandshake(structure.NewHandshake(hash, peerIdRemote))
-	//
-	//		_ = s.StopListening()
-	//		So(s.Listening, ShouldBeFalse)
-	//	})
+
+	Convey("Receives Bitfield message and sends Interested message", t, func() {
+		s := NewBTService(port, []byte(peerIdRemote))
+		mc := NewMockConnectionFetcher()
+		s.ConnectionFetcher = mc
+		s.AddHash(hash)
+		s.StartListening()
+
+		time.Sleep(time.Millisecond * 50)
+
+		// TODO: check that peer data is saved within service data structure
+		peers := make([]structure.Peer, 1)
+		peers[0] = structure.Peer{IP: net.IPv4(192, 168, 1, 1), Port: 55556}
+		s.InitiateHandshakes(hash, peers)
+
+		for _, p := range peers {
+			c0 := mc.Conns[p.AddrString()].Conn.(*MockConnection)
+			hs, err := structure.ReadHandshake(bytes.NewReader(<-c0.ReceiveBytesChan))
+			So(hs, ShouldNotBeNil)
+			So(err, ShouldBeNil)
+
+			hs, _ = structure.NewHandshake(hash, []byte(peerIdClient))
+			c0.SendHandshake(hs)
+
+			bf := structure.BitFieldFromHexString("\xff\xff\xff\x01")
+			msg := &structure.BitFieldMessage{BasicMessage: structure.BasicMessage{Type: structure.MessageTypeBitField, Length: 5, Payload: []byte("\xff\xff\xff\x01")}, BitField: bf}
+			c0.SendMessage(msg)
+		}
+
+		time.Sleep(time.Millisecond * 50)
+
+		_ = s.StopListening()
+	})
 }

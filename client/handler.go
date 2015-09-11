@@ -267,6 +267,14 @@ func (btc *BTConn) readLoop(addChan, leaveChan chan<- *BTConn) {
 			btc.MessageChan <- true
 		case _ = <-btc.MessageChan:
 			log.Printf("[readLoop] Reading Message from: %q", btc)
+			m, err := structure.ReadMessage(btc)
+			if err != nil {
+				log.Printf("[readLoop] error reading message: %s", err)
+				btc.Close()
+				leaveChan <- btc
+				continue
+			}
+			log.Println("[readLoop] got Mesage: ", m)
 			time.Sleep(time.Millisecond * 100) // TODO: get rid of this sleep
 			btc.Close()
 			leaveChan <- btc
