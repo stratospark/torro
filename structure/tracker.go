@@ -72,7 +72,11 @@ type Peer struct {
 }
 
 func (peer *Peer) String() string {
-	return fmt.Sprintf(" (%s:%d) ", peer.IP, peer.Port)
+	return fmt.Sprintf("%s:%d", peer.IP, peer.Port)
+}
+
+func (peer *Peer) AddrString() string {
+	return fmt.Sprintf("\"%s\":%d", peer.IP, peer.Port)
 }
 
 type TrackerResponse struct {

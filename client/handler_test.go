@@ -1,7 +1,7 @@
 package client
 
 import (
-	"github.com/oleiade/lane"
+	"bytes"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stratospark/torro/structure"
 	"io"
@@ -12,23 +12,44 @@ import (
 )
 
 type MockConnection struct {
-	Stack *lane.Stack
+	SendHandshakeChan chan *structure.Handshake
+	SendMessageChan   chan *structure.Message
+	RestOfMessageChan chan []byte
+	ReceiveBytesChan  chan []byte
+}
+
+func (c *MockConnection) SendHandshake(hs *structure.Handshake) {
+	c.SendHandshakeChan <- hs
 }
 
 func (c *MockConnection) Read(b []byte) (n int, err error) {
-	read := c.Stack.Pop().([]byte)
-	log.Printf("MockConnection Read: %q\n", read)
-	for i := 0; i < len(b); i++ {
-		b[i] = read[i]
+	select {
+	case read := <-c.RestOfMessageChan:
+		log.Printf("MockConnection Read, RestOfMessage: %q\n", read)
+		for i := 0; i < len(b); i++ {
+			b[i] = read[i]
+		}
+		if len(b) < len(read) {
+			c.RestOfMessageChan <- read[len(b):]
+		}
+	case hs := <-c.SendHandshakeChan:
+		read := hs.Bytes()
+		log.Printf("MockConnection Read, Handshake: %q\n", read)
+		for i := 0; i < len(b); i++ {
+			b[i] = read[i]
+		}
+		log.Println(len(b), len(read))
+		if len(b) < len(read) {
+			c.RestOfMessageChan <- read[len(b):]
+		}
 	}
-	c.Stack.Push(read[len(b):])
+
 	return len(b), err
 }
 
 func (c *MockConnection) Write(b []byte) (n int, err error) {
 	log.Printf("MockConnection Write: %q\n", b)
-	c.Stack.Push(b)
-	log.Printf("%d", c.Stack.Size())
+	c.ReceiveBytesChan <- b
 	return len(b), nil
 }
 
@@ -36,20 +57,37 @@ func (c *MockConnection) Close() error {
 	return nil
 }
 
-type MockConnectionFetcher struct{}
+type MockConnectionFetcher struct {
+	Conns map[string]*BTConn
+}
+
+func NewMockConnectionFetcher() *MockConnectionFetcher {
+	return &MockConnectionFetcher{
+		Conns: make(map[string]*BTConn),
+	}
+}
 
 func (t *MockConnectionFetcher) Dial(addr string) (*BTConn, error) {
-	conn := &MockConnection{Stack: lane.NewStack()}
-	return &BTConn{Conn: conn}, nil
+	conn := &MockConnection{
+		SendHandshakeChan: make(chan *structure.Handshake, 1),
+		SendMessageChan:   make(chan *structure.Message, 1),
+		RestOfMessageChan: make(chan []byte, 1),
+		ReceiveBytesChan:  make(chan []byte, 1),
+	}
+	btc := &BTConn{Conn: conn}
+	t.Conns[addr] = btc
+
+	return btc, nil
 }
 
 func TestHandler(t *testing.T) {
 	port := 55555
-	peerId := "-TR2840-nj5ovtkoz2ed8"
+	peerIdRemote := "-TR2840-nj5ovtkREMOTE"
+	peerIdClient := "-TR2840-nj5ovtkCLIENT"
 	hash := []byte("\x6f\xda\xb6\xc1\x9f\x72\x14\x76\xfa\xca\xab\x36\x60\x8a\x87\x7a\x2a\xac\xbf\xc9")
 
 	Convey("Listens to incoming connections on a given port", t, func() {
-		s := NewBTService(port, []byte(peerId))
+		s := NewBTService(port, []byte(peerIdRemote))
 		s.StartListening()
 
 		time.Sleep(time.Millisecond)
@@ -61,7 +99,7 @@ func TestHandler(t *testing.T) {
 	})
 
 	Convey("Accepts a handshake and adds to the connection list", t, func() {
-		s := NewBTService(port, []byte(peerId))
+		s := NewBTService(port, []byte(peerIdRemote))
 		s.AddHash(hash)
 		s.StartListening()
 
@@ -86,7 +124,7 @@ func TestHandler(t *testing.T) {
 	})
 
 	Convey("Rejects a malformed handshake request", t, func() {
-		s := NewBTService(port, []byte(peerId))
+		s := NewBTService(port, []byte(peerIdRemote))
 		s.StartListening()
 
 		time.Sleep(time.Millisecond * 50)
@@ -110,25 +148,54 @@ func TestHandler(t *testing.T) {
 	})
 
 	Convey("Sends out handshake request to every IP in list", t, func() {
-		log.Println("----------------------")
-		s := NewBTService(port, []byte(peerId))
-		s.ConnectionFetcher = &MockConnectionFetcher{}
+		s := NewBTService(port, []byte(peerIdRemote))
+		mc := NewMockConnectionFetcher()
+		s.ConnectionFetcher = mc
 		s.AddHash(hash)
 		s.StartListening()
 
 		time.Sleep(time.Millisecond * 50)
-
-		So(true, ShouldBeTrue)
 
 		// TODO: check that peer data is saved within service data structure
 		peers := make([]structure.Peer, 2)
 		peers[0] = structure.Peer{IP: net.IPv4(192, 168, 1, 1), Port: 55556}
 		peers[1] = structure.Peer{IP: net.IPv4(192, 168, 1, 2), Port: 55557}
 		s.InitiateHandshakes(hash, peers)
+
+		for _, p := range peers {
+			c0 := mc.Conns[p.AddrString()].Conn.(*MockConnection)
+			hs, err := structure.ReadHandshake(bytes.NewReader(<-c0.ReceiveBytesChan))
+			So(hs, ShouldNotBeNil)
+			So(err, ShouldBeNil)
+			hs, _ = structure.NewHandshake(hash, []byte(peerIdClient))
+			c0.SendHandshake(hs)
+		}
+
 		time.Sleep(time.Millisecond * 50)
 		So(len(s.Peers), ShouldEqual, len(peers))
 
 		_ = s.StopListening()
 		So(s.Listening, ShouldBeFalse)
 	})
+	//
+	//	Convey("Receives Bitfield message and sends Interested message", t, func() {
+	//		s := NewBTService(port, []byte(peerIdRemote))
+	//		mc := NewMockConnectionFetcher()
+	//		s.ConnectionFetcher = mc
+	//		s.AddHash(hash)
+	//		s.StartListening()
+	//
+	//		time.Sleep(time.Millisecond * 50)
+	//
+	//		peers := make([]structure.Peer, 1)
+	//		peers[0] = structure.Peer{IP: net.IPv4(192, 168, 1, 1), Port: 55556}
+	//		s.InitiateHandshakes(hash, peers)
+	//		time.Sleep(time.Millisecond * 50)
+	//
+	//		c0 := mc.Conns[peers[0].String()]
+	//		c0.SendHandshake(structure.NewHandshake(hash, peerIdRemote))
+	//
+	//		_ = s.StopListening()
+	//		So(s.Listening, ShouldBeFalse)
+	//	})
 }

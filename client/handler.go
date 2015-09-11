@@ -215,7 +215,7 @@ func (btc *BTConn) handleConnection(s *BTService) {
 	btc.PeerID = string(s.PeerID)
 
 	go btc.readLoop(s.AddChan, s.LeaveChan)
-	go btc.writeLoop()
+	go btc.writeLoop(s.AddChan, s.LeaveChan)
 
 	return
 }
@@ -274,7 +274,7 @@ func (btc *BTConn) readLoop(addChan, leaveChan chan<- *BTConn) {
 	}
 }
 
-func (btc *BTConn) writeLoop() {
+func (btc *BTConn) writeLoop(addChan, leaveChan chan<- *BTConn) {
 	return
 }
 
