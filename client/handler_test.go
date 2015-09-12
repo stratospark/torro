@@ -13,6 +13,11 @@ import (
 	"time"
 )
 
+/*
+MockConnection facilitates testing a socket connection by
+having a SendMessageChan that sends a given message to a peer,
+and a ReceiveBytesChan where a test can assert a valid response.
+*/
 type MockConnection struct {
 	ReadQueue         *lane.Queue
 	SendMessageChan   chan structure.Message
@@ -20,10 +25,18 @@ type MockConnection struct {
 	ReceiveBytesChan  chan []byte
 }
 
+/*
+SendMessage puts a message on the channel to be sent to the peer.
+*/
 func (c *MockConnection) SendMessage(m structure.Message) {
 	c.SendMessageChan <- m
 }
 
+/*
+Read fills the []byte b with a portion of the next sent message.
+If only a portion of the message was sent, the head of the queue
+is modified to be the remainder of that message.
+*/
 func (c *MockConnection) Read(b []byte) (n int, err error) {
 	log.Println("Trying to read, len(b): ", len(b))
 	readBytes := func() {
@@ -53,16 +66,27 @@ func (c *MockConnection) Read(b []byte) (n int, err error) {
 	return len(b), err
 }
 
+/*
+Write sends a []byte b to the receive channel where a test can
+assert whether it is valid or not.
+*/
 func (c *MockConnection) Write(b []byte) (n int, err error) {
 	log.Printf("MockConnection Write: %q\n", b)
 	c.ReceiveBytesChan <- b
 	return len(b), nil
 }
 
+/*
+Close is a no-op stub request
+*/
 func (c *MockConnection) Close() error {
 	return nil
 }
 
+/*
+MockConnectionFetcher will return MockConnections rather than
+TCPConnections to facilitate testing without the network.
+*/
 type MockConnectionFetcher struct {
 	Conns map[string]*BTConn
 }
@@ -73,6 +97,9 @@ func NewMockConnectionFetcher() *MockConnectionFetcher {
 	}
 }
 
+/*
+Dial returns a new MockConnection and adds it to the set of Conns.
+*/
 func (t *MockConnectionFetcher) Dial(addr string) (*BTConn, error) {
 	conn := &MockConnection{
 		ReadQueue:         lane.NewQueue(),
