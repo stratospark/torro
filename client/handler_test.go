@@ -15,14 +15,9 @@ import (
 
 type MockConnection struct {
 	ReadQueue         *lane.Queue
-	SendHandshakeChan chan *structure.Handshake
 	SendMessageChan   chan structure.Message
 	RestOfMessageChan chan bool
 	ReceiveBytesChan  chan []byte
-}
-
-func (c *MockConnection) SendHandshake(hs *structure.Handshake) {
-	c.SendHandshakeChan <- hs
 }
 
 func (c *MockConnection) SendMessage(m structure.Message) {
@@ -39,6 +34,7 @@ func (c *MockConnection) Read(b []byte) (n int, err error) {
 		for i := 0; i < len(b); i++ {
 			b[i] = read[i]
 		}
+		log.Printf("After REad")
 		if len(b) < len(read) {
 			c.ReadQueue.Prepend(read[len(b):])
 			c.RestOfMessageChan <- true
@@ -46,11 +42,6 @@ func (c *MockConnection) Read(b []byte) (n int, err error) {
 	}
 	select {
 	case <-c.RestOfMessageChan:
-		readBytes()
-	case hs := <-c.SendHandshakeChan:
-		log.Println("SendHandshakeChan")
-		read := hs.Bytes()
-		c.ReadQueue.Enqueue(read)
 		readBytes()
 	case m := <-c.SendMessageChan:
 		log.Println("SendMessageChan")
@@ -85,7 +76,6 @@ func NewMockConnectionFetcher() *MockConnectionFetcher {
 func (t *MockConnectionFetcher) Dial(addr string) (*BTConn, error) {
 	conn := &MockConnection{
 		ReadQueue:         lane.NewQueue(),
-		SendHandshakeChan: make(chan *structure.Handshake, 1),
 		SendMessageChan:   make(chan structure.Message, 1),
 		RestOfMessageChan: make(chan bool, 1),
 		ReceiveBytesChan:  make(chan []byte, 1),
@@ -108,7 +98,6 @@ func TestListen(t *testing.T) {
 		s := NewBTService(port, []byte(peerIdRemote))
 		s.StartListening()
 
-		time.Sleep(time.Millisecond)
 		So(s.Listener, ShouldNotBeNil)
 		So(s.Listening, ShouldBeTrue)
 
@@ -124,7 +113,6 @@ func TestAcceptHandshake(t *testing.T) {
 		s.AddHash(hash)
 		s.StartListening()
 
-		time.Sleep(time.Millisecond)
 		So(s.Listener, ShouldNotBeNil)
 		So(s.Listening, ShouldBeTrue)
 
@@ -134,7 +122,6 @@ func TestAcceptHandshake(t *testing.T) {
 
 		handshake := "\x13\x42\x69\x74\x54\x6f\x72\x72\x65\x6e\x74\x20\x70\x72\x6f\x74\x6f\x63\x6f\x6c\x00\x00\x00\x00\x00\x10\x00\x05\x6f\xda\xb6\xc1\x9f\x72\x14\x76\xfa\xca\xab\x36\x60\x8a\x87\x7a\x2a\xac\xbf\xc9\x2d\x55\x54\x33\x34\x34\x30\x2d\xcf\x9f\x51\x2b\xce\x01\x31\xf9\x38\x6f\xb6\x98"
 		conn.Write([]byte(handshake))
-		time.Sleep(time.Millisecond)
 		respHandshake, err := structure.ReadHandshake(conn)
 		So(err, ShouldBeNil)
 		So(respHandshake, ShouldNotBeNil)
@@ -150,7 +137,6 @@ func TestRejectHandshake(t *testing.T) {
 		s := NewBTService(port, []byte(peerIdRemote))
 		s.StartListening()
 
-		time.Sleep(time.Millisecond * 50)
 		So(s.Listener, ShouldNotBeNil)
 		So(s.Listening, ShouldBeTrue)
 
@@ -160,7 +146,6 @@ func TestRejectHandshake(t *testing.T) {
 
 		handshake := "\x13\x43\x69\x74\x54\x6f\x72\x72\x65\x6e\x74\x20\x70\x72\x6f\x74\x6f\x63\x6f\x6c\x00\x00\x00\x00\x00\x10\x00\x05\x6f\xda\xb6\xc1\x9f\x72\x14\x76\xfa\xca\xab\x36\x60\x8a\x87\x7a\x2a\xac\xbf\xc9\x2d\x55\x54\x33\x34\x34\x30\x2d\xcf\x9f\x51\x2b\xce\x01\x31\xf9\x38\x6f\xb6\x98"
 		conn.Write([]byte(handshake))
-		time.Sleep(time.Millisecond * 50)
 		So(len(s.Peers), ShouldEqual, 0)
 		buf := make([]byte, 4)
 		_, err = io.ReadFull(conn, buf)
@@ -179,8 +164,6 @@ func TestInitiateHandshakes(t *testing.T) {
 		s.AddHash(hash)
 		s.StartListening()
 
-		time.Sleep(time.Millisecond * 50)
-
 		// TODO: check that peer data is saved within service data structure
 		peers := make([]structure.Peer, 2)
 		peers[0] = structure.Peer{IP: net.IPv4(192, 168, 1, 1), Port: 55556}
@@ -193,10 +176,10 @@ func TestInitiateHandshakes(t *testing.T) {
 			So(hs, ShouldNotBeNil)
 			So(err, ShouldBeNil)
 			hs, _ = structure.NewHandshake(hash, []byte(peerIdClient))
-			c0.SendHandshake(hs)
+			c0.SendMessage(hs)
 		}
 
-		time.Sleep(time.Millisecond * 50)
+		time.Sleep(time.Millisecond)
 		So(len(s.Peers), ShouldEqual, len(peers))
 
 		_ = s.StopListening()
@@ -212,7 +195,7 @@ func ReadMessageOrTimeout(c *MockConnection) (*structure.BasicMessage, error) {
 		So(bm, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 		return bm, err
-	case <-time.After(time.Millisecond * 100):
+	case <-time.After(time.Millisecond * 10):
 		return nil, errors.New("Timeout")
 	}
 }
@@ -224,8 +207,6 @@ func TestConversation(t *testing.T) {
 		s.ConnectionFetcher = mc
 		s.AddHash(hash)
 		s.StartListening()
-
-		time.Sleep(time.Millisecond * 50)
 
 		// TODO: check that peer data is saved within service data structure
 		peers := make([]structure.Peer, 1)
@@ -239,7 +220,7 @@ func TestConversation(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			hs, _ = structure.NewHandshake(hash, []byte(peerIdClient))
-			c0.SendHandshake(hs)
+			c0.SendMessage(hs)
 
 			bf := structure.BitFieldFromHexString("\xff\xff\xff\x01")
 			msg := &structure.BitFieldMessage{BasicMessage: structure.BasicMessage{Type: structure.MessageTypeBitField, Length: 5, Payload: []byte("\xff\xff\xff\x01")}, BitField: bf}
@@ -249,8 +230,6 @@ func TestConversation(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(m.Type, ShouldEqual, structure.MessageTypeInterested)
 		}
-
-		time.Sleep(time.Millisecond * 50)
 
 		_ = s.StopListening()
 	})
