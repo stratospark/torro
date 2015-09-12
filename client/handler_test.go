@@ -2,6 +2,8 @@ package client
 
 import (
 	"bytes"
+	"errors"
+	"github.com/oleiade/lane"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stratospark/torro/structure"
 	"io"
@@ -12,9 +14,10 @@ import (
 )
 
 type MockConnection struct {
+	ReadQueue         *lane.Queue
 	SendHandshakeChan chan *structure.Handshake
 	SendMessageChan   chan structure.Message
-	RestOfMessageChan chan []byte
+	RestOfMessageChan chan bool
 	ReceiveBytesChan  chan []byte
 }
 
@@ -27,24 +30,33 @@ func (c *MockConnection) SendMessage(m structure.Message) {
 }
 
 func (c *MockConnection) Read(b []byte) (n int, err error) {
-	readBytes := func(read []byte) {
+	log.Println("Trying to read, len(b): ", len(b))
+	readBytes := func() {
+		log.Printf("ReadBytes, len(queue): %d", c.ReadQueue.Size())
+		h := c.ReadQueue.Dequeue()
+		read, _ := h.([]byte)
 		log.Printf("MockConnection Read: %q, len(read): %d, len(b): %d\n", read, len(read), len(b))
 		for i := 0; i < len(b); i++ {
 			b[i] = read[i]
 		}
 		if len(b) < len(read) {
-			c.RestOfMessageChan <- read[len(b):]
+			c.ReadQueue.Prepend(read[len(b):])
+			c.RestOfMessageChan <- true
 		}
 	}
 	select {
-	case read := <-c.RestOfMessageChan:
-		readBytes(read)
+	case <-c.RestOfMessageChan:
+		readBytes()
 	case hs := <-c.SendHandshakeChan:
+		log.Println("SendHandshakeChan")
 		read := hs.Bytes()
-		readBytes(read)
+		c.ReadQueue.Enqueue(read)
+		readBytes()
 	case m := <-c.SendMessageChan:
+		log.Println("SendMessageChan")
 		read := m.Bytes()
-		readBytes(read)
+		c.ReadQueue.Enqueue(read)
+		readBytes()
 	}
 
 	return len(b), err
@@ -72,9 +84,10 @@ func NewMockConnectionFetcher() *MockConnectionFetcher {
 
 func (t *MockConnectionFetcher) Dial(addr string) (*BTConn, error) {
 	conn := &MockConnection{
+		ReadQueue:         lane.NewQueue(),
 		SendHandshakeChan: make(chan *structure.Handshake, 1),
 		SendMessageChan:   make(chan structure.Message, 1),
-		RestOfMessageChan: make(chan []byte, 1),
+		RestOfMessageChan: make(chan bool, 1),
 		ReceiveBytesChan:  make(chan []byte, 1),
 	}
 	btc := &BTConn{Conn: conn}
@@ -191,6 +204,19 @@ func TestInitiateHandshakes(t *testing.T) {
 	})
 }
 
+func ReadMessageOrTimeout(c *MockConnection) (*structure.BasicMessage, error) {
+	select {
+	case b := <-c.ReceiveBytesChan:
+		m, err := structure.ReadMessage(bytes.NewReader(b))
+		bm, _ := m.(*structure.BasicMessage)
+		So(bm, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+		return bm, err
+	case <-time.After(time.Millisecond * 100):
+		return nil, errors.New("Timeout")
+	}
+}
+
 func TestConversation(t *testing.T) {
 	Convey("Receives Bitfield message and sends Interested message", t, func() {
 		s := NewBTService(port, []byte(peerIdRemote))
@@ -219,9 +245,9 @@ func TestConversation(t *testing.T) {
 			msg := &structure.BitFieldMessage{BasicMessage: structure.BasicMessage{Type: structure.MessageTypeBitField, Length: 5, Payload: []byte("\xff\xff\xff\x01")}, BitField: bf}
 			c0.SendMessage(msg)
 
-			//			m, err := structure.ReadMessage(bytes.NewReader(<-c0.ReceiveBytesChan))
-			//			So(m, ShouldNotBeNil)
-			//			So(err, ShouldBeNil)
+			m, err := ReadMessageOrTimeout(c0)
+			So(err, ShouldBeNil)
+			So(m.Type, ShouldEqual, structure.MessageTypeInterested)
 		}
 
 		time.Sleep(time.Millisecond * 50)

@@ -29,6 +29,7 @@ type BTConn struct {
 	PeerID         string
 	HandshakeChan  chan bool
 	MessageChan    chan bool
+	WriteChan      chan *structure.BasicMessage
 	DisconnectChan chan bool
 }
 
@@ -212,6 +213,7 @@ func (btc *BTConn) handleConnection(s *BTService) {
 	btc.HandshakeChan = make(chan bool, 1)
 	btc.MessageChan = make(chan bool, 1)
 	btc.DisconnectChan = make(chan bool, 1)
+	btc.WriteChan = make(chan *structure.BasicMessage, 1)
 	btc.PeerID = string(s.PeerID)
 
 	go btc.readLoop(s.AddChan, s.LeaveChan)
@@ -274,6 +276,14 @@ func (btc *BTConn) readLoop(addChan, leaveChan chan<- *BTConn) {
 				leaveChan <- btc
 				continue
 			}
+
+			switch m.(type) {
+			case *structure.BitFieldMessage:
+				log.Println("BIT FIELD MESSAGE")
+				btc.WriteChan <- &structure.BasicMessage{Type: structure.MessageTypeInterested, Length: 1}
+			default:
+				log.Println(" OTHER MESSAGE")
+			}
 			log.Println("[readLoop] got Mesage: ", m)
 			time.Sleep(time.Millisecond * 100) // TODO: get rid of this sleep
 			btc.Close()
@@ -283,6 +293,12 @@ func (btc *BTConn) readLoop(addChan, leaveChan chan<- *BTConn) {
 }
 
 func (btc *BTConn) writeLoop(addChan, leaveChan chan<- *BTConn) {
+	for msg := range btc.WriteChan {
+		//		switch msg.Type {
+		//
+		//		}
+		btc.Write(msg.Bytes())
+	}
 	return
 }
 
