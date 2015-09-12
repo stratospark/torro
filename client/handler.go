@@ -226,7 +226,7 @@ func (btc *BTConn) readLoop(addChan, leaveChan chan<- *BTConn) {
 	for {
 		select {
 		case _ = <-btc.HandshakeChan:
-			log.Printf("[readLoop] Got Handshake\n")
+			log.Printf("[readLoop] Waiting for Handshake\n")
 			peerHs, err := handleHandshake(btc)
 			if err != nil {
 				log.Printf("[readLoop] error: %q", err.Error())

@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 	"testing"
 	"time"
 )
@@ -221,13 +222,13 @@ func TestInitiateHandshakes(t *testing.T) {
 	})
 }
 
-func ReadMessageOrTimeout(c *MockConnection) (*structure.BasicMessage, error) {
+func ReadMessageOrTimeout(c *MockConnection, ctx C) (*structure.BasicMessage, error) {
 	select {
 	case b := <-c.ReceiveBytesChan:
 		m, err := structure.ReadMessage(bytes.NewReader(b))
 		bm, _ := m.(*structure.BasicMessage)
-		So(bm, ShouldNotBeNil)
-		So(err, ShouldBeNil)
+		ctx.So(bm, ShouldNotBeNil)
+		ctx.So(err, ShouldBeNil)
 		return bm, err
 	case <-time.After(time.Millisecond * 10):
 		return nil, errors.New("Timeout")
@@ -235,7 +236,7 @@ func ReadMessageOrTimeout(c *MockConnection) (*structure.BasicMessage, error) {
 }
 
 func TestConversation(t *testing.T) {
-	Convey("Receives Bitfield message and sends Interested message", t, func() {
+	Convey("Receives Bitfield message and sends Interested message", t, func(ctx C) {
 		s := NewBTService(port, []byte(peerIdRemote))
 		mc := NewMockConnectionFetcher()
 		s.ConnectionFetcher = mc
@@ -243,27 +244,35 @@ func TestConversation(t *testing.T) {
 		s.StartListening()
 
 		// TODO: check that peer data is saved within service data structure
-		peers := make([]structure.Peer, 1)
+		peers := make([]structure.Peer, 2)
 		peers[0] = structure.Peer{IP: net.IPv4(192, 168, 1, 1), Port: 55556}
+		peers[1] = structure.Peer{IP: net.IPv4(192, 168, 1, 2), Port: 55557}
 		s.InitiateHandshakes(hash, peers)
 
+		wg := sync.WaitGroup{}
+		wg.Add(len(peers))
 		for _, p := range peers {
-			c0 := mc.Conns[p.AddrString()].Conn.(*MockConnection)
-			hs, err := structure.ReadHandshake(bytes.NewReader(<-c0.ReceiveBytesChan))
-			So(hs, ShouldNotBeNil)
-			So(err, ShouldBeNil)
+			go func(pp structure.Peer) {
+				c0 := mc.Conns[pp.AddrString()].Conn.(*MockConnection)
+				hs, err := structure.ReadHandshake(bytes.NewReader(<-c0.ReceiveBytesChan))
+				ctx.So(hs, ShouldNotBeNil)
+				ctx.So(err, ShouldBeNil)
 
-			hs, _ = structure.NewHandshake(hash, []byte(peerIdClient))
-			c0.SendMessage(hs)
+				hs, _ = structure.NewHandshake(hash, []byte(peerIdClient))
+				c0.SendMessage(hs)
 
-			bf := structure.BitFieldFromHexString("\xff\xff\xff\x01")
-			msg := &structure.BitFieldMessage{BasicMessage: structure.BasicMessage{Type: structure.MessageTypeBitField, Length: 5, Payload: []byte("\xff\xff\xff\x01")}, BitField: bf}
-			c0.SendMessage(msg)
+				bf := structure.BitFieldFromHexString("\xff\xff\xff\x01")
+				msg := &structure.BitFieldMessage{BasicMessage: structure.BasicMessage{Type: structure.MessageTypeBitField, Length: 5, Payload: []byte("\xff\xff\xff\x01")}, BitField: bf}
+				c0.SendMessage(msg)
 
-			m, err := ReadMessageOrTimeout(c0)
-			So(err, ShouldBeNil)
-			So(m.Type, ShouldEqual, structure.MessageTypeInterested)
+				m, err := ReadMessageOrTimeout(c0, ctx)
+				ctx.So(err, ShouldBeNil)
+				ctx.So(m.Type, ShouldEqual, structure.MessageTypeInterested)
+
+				wg.Done()
+			}(p)
 		}
+		wg.Wait()
 
 		_ = s.StopListening()
 	})
