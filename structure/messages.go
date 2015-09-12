@@ -121,6 +121,26 @@ type BasicMessage struct {
 	Payload []byte
 }
 
+type KeepAliveMessage struct {
+	BasicMessage
+}
+
+type ChokeMessage struct {
+	BasicMessage
+}
+
+type UnchokeMessage struct {
+	BasicMessage
+}
+
+type InterestedMessage struct {
+	BasicMessage
+}
+
+type NotInterestedMessage struct {
+	BasicMessage
+}
+
 type HaveMessage struct {
 	BasicMessage
 	PieceIndex int
@@ -195,7 +215,7 @@ func ReadMessage(r Reader) (m Message, err error) {
 	mLen := int(binary.BigEndian.Uint32(buf))
 
 	if mLen == 0 {
-		return &BasicMessage{Length: 0, Type: MessageTypeKeepAlive}, nil
+		return &KeepAliveMessage{BasicMessage: BasicMessage{Length: 0, Type: MessageTypeKeepAlive}}, nil
 	}
 
 	buf = make([]byte, mLen)
@@ -206,10 +226,22 @@ func ReadMessage(r Reader) (m Message, err error) {
 	}
 	mType := MessageType(buf[0])
 
-	if mLen > 1 {
+	if mLen >= 1 {
 		mPayload := buf[1:mLen]
 		bm := BasicMessage{Length: mLen, Type: mType, Payload: mPayload}
 		switch mType {
+		case MessageTypeChoke:
+			bm.Payload = nil
+			m = &ChokeMessage{BasicMessage: bm}
+		case MessageTypeUnchoke:
+			bm.Payload = nil
+			m = &UnchokeMessage{BasicMessage: bm}
+		case MessageTypeInterested:
+			bm.Payload = nil
+			m = &InterestedMessage{BasicMessage: bm}
+		case MessageTypeNotInterested:
+			bm.Payload = nil
+			m = &NotInterestedMessage{BasicMessage: bm}
 		case MessageTypeHave:
 			pi := int(binary.BigEndian.Uint32(mPayload))
 			m = &HaveMessage{BasicMessage: bm, PieceIndex: pi}
@@ -234,8 +266,6 @@ func ReadMessage(r Reader) (m Message, err error) {
 		case MessageTypePort:
 			port := int(binary.BigEndian.Uint16(mPayload))
 			m = &PortMessage{BasicMessage: bm, Port: port}
-		default:
-			m = &bm
 		}
 	} else {
 		m = &BasicMessage{Length: mLen, Type: mType}
