@@ -325,5 +325,6 @@ func (s *BTService) StopListening() (err error) {
 	log.Println("StopListening")
 	s.CloseCh <- true
 	_ = <-s.TermCh
+	log.Println("StoppedListening")
 	return nil
 }

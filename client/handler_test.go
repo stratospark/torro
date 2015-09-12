@@ -131,7 +131,14 @@ func TestListen(t *testing.T) {
 		_ = s.StopListening()
 		So(s.Listening, ShouldBeFalse)
 	})
+}
 
+func TestBadAddress(t *testing.T) {
+	Convey("Listens on an invalid port", t, func() {
+		s := NewBTService(1, []byte(peerIdRemote))
+		err := s.StartListening()
+		So(err, ShouldNotBeNil)
+	})
 }
 
 func TestAcceptHandshake(t *testing.T) {
