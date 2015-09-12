@@ -222,14 +222,11 @@ func TestInitiateHandshakes(t *testing.T) {
 	})
 }
 
-func ReadMessageOrTimeout(c *MockConnection, ctx C) (*structure.BasicMessage, error) {
+func ReadMessageOrTimeout(c *MockConnection, ctx C) (structure.Message, error) {
 	select {
 	case b := <-c.ReceiveBytesChan:
 		m, err := structure.ReadMessage(bytes.NewReader(b))
-		bm, _ := m.(*structure.BasicMessage)
-		ctx.So(bm, ShouldNotBeNil)
-		ctx.So(err, ShouldBeNil)
-		return bm, err
+		return m, err
 	case <-time.After(time.Millisecond * 10):
 		return nil, errors.New("Timeout")
 	}
@@ -244,9 +241,9 @@ func TestConversation(t *testing.T) {
 		s.StartListening()
 
 		// TODO: check that peer data is saved within service data structure
-		peers := make([]structure.Peer, 2)
+		peers := make([]structure.Peer, 1)
 		peers[0] = structure.Peer{IP: net.IPv4(192, 168, 1, 1), Port: 55556}
-		peers[1] = structure.Peer{IP: net.IPv4(192, 168, 1, 2), Port: 55557}
+		//		peers[1] = structure.Peer{IP: net.IPv4(192, 168, 1, 2), Port: 55557}
 		s.InitiateHandshakes(hash, peers)
 
 		wg := sync.WaitGroup{}
@@ -262,12 +259,19 @@ func TestConversation(t *testing.T) {
 				c0.SendMessage(hs)
 
 				bf := structure.BitFieldFromHexString("\xff\xff\xff\x01")
-				msg := &structure.BitFieldMessage{BasicMessage: structure.BasicMessage{Type: structure.MessageTypeBitField, Length: 5, Payload: []byte("\xff\xff\xff\x01")}, BitField: bf}
-				c0.SendMessage(msg)
+				msg0 := &structure.BitFieldMessage{BasicMessage: structure.BasicMessage{Type: structure.MessageTypeBitField, Length: 5, Payload: []byte("\xff\xff\xff\x01")}, BitField: bf}
+				c0.SendMessage(msg0)
 
 				m, err := ReadMessageOrTimeout(c0, ctx)
 				ctx.So(err, ShouldBeNil)
-				ctx.So(m.Type, ShouldEqual, structure.MessageTypeInterested)
+				ctx.So(m.GetType(), ShouldEqual, structure.MessageTypeInterested)
+
+				//				msg1 := &structure.BasicMessage{Type:structure.MessageTypeUnchoke, Length: 1}
+				//				c0.SendMessage(msg1)
+				//
+				//				m, err = ReadMessageOrTimeout(c0, ctx)
+				//				ctx.So(err, ShouldBeNil)
+				//				ctx.So(m.GetType(), ShouldEqual, structure.MessageTypeRequest)
 
 				wg.Done()
 			}(p)

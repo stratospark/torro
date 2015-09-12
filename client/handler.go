@@ -25,6 +25,10 @@ connection to a Peer according to the BitTorrent protocol.
 type BTConn struct {
 	Conn           Connection
 	State          BTState
+	AmChoking      bool
+	AmInterested   bool
+	PeerChoking    bool
+	PeerInterested bool
 	Hash           string
 	PeerID         string
 	HandshakeChan  chan bool

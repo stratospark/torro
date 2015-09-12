@@ -95,9 +95,14 @@ func (h *Handshake) Bytes() []byte {
 	return buf.Bytes()
 }
 
+func (h *Handshake) GetType() MessageType {
+	return MessageTypeHandshake
+}
+
 type MessageType byte
 
 const (
+	MessageTypeHandshake     MessageType = 254
 	MessageTypeKeepAlive     MessageType = 255
 	MessageTypeChoke         MessageType = 0
 	MessageTypeUnchoke       MessageType = 1
@@ -113,12 +118,17 @@ const (
 
 type Message interface {
 	Bytes() []byte
+	GetType() MessageType
 }
 
 type BasicMessage struct {
 	Length  int
 	Type    MessageType
 	Payload []byte
+}
+
+func (bm *BasicMessage) GetType() MessageType {
+	return bm.Type
 }
 
 type KeepAliveMessage struct {
