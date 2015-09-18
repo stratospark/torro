@@ -35,9 +35,10 @@ func TestHandshake(t *testing.T) {
 }
 
 type StringMessageTest struct {
-	Desc    string
-	String  string
-	Message Message
+	Desc               string
+	String             string
+	Message            Message
+	ConstructedMessage Message
 }
 
 func TestMessages(t *testing.T) {
@@ -46,27 +47,38 @@ func TestMessages(t *testing.T) {
 
 	smTests := []StringMessageTest{
 		{"KeepAlive", "\x00\x00\x00\x00",
-			&KeepAliveMessage{BasicMessage: BasicMessage{Type: MessageTypeKeepAlive, Length: 0}}},
+			&KeepAliveMessage{BasicMessage: BasicMessage{Type: MessageTypeKeepAlive, Length: 0}},
+			NewKeepAliveMessage()},
 		{"Choke", "\x00\x00\x00\x01\x00",
-			&ChokeMessage{BasicMessage: BasicMessage{Type: MessageTypeChoke, Length: 1}}},
+			&ChokeMessage{BasicMessage: BasicMessage{Type: MessageTypeChoke, Length: 1}},
+			NewChokeMessage()},
 		{"Unchoke", "\x00\x00\x00\x01\x01",
-			&UnchokeMessage{BasicMessage: BasicMessage{Type: MessageTypeUnchoke, Length: 1}}},
+			&UnchokeMessage{BasicMessage: BasicMessage{Type: MessageTypeUnchoke, Length: 1}},
+			NewUnchokeMessage()},
 		{"Interested", "\x00\x00\x00\x01\x02",
-			&InterestedMessage{BasicMessage: BasicMessage{Type: MessageTypeInterested, Length: 1}}},
+			&InterestedMessage{BasicMessage: BasicMessage{Type: MessageTypeInterested, Length: 1}},
+			NewInterestedMessage()},
 		{"NotInterested", "\x00\x00\x00\x01\x03",
-			&NotInterestedMessage{BasicMessage: BasicMessage{Type: MessageTypeNotInterested, Length: 1}}},
+			&NotInterestedMessage{BasicMessage: BasicMessage{Type: MessageTypeNotInterested, Length: 1}},
+			NewNotInterestedMessage()},
 		{"Have", "\x00\x00\x00\x05\x04\x00\x00\x18\xa4",
-			&HaveMessage{BasicMessage: BasicMessage{Type: MessageTypeHave, Length: 5, Payload: []byte("\x00\x00\x18\xa4")}, PieceIndex: 6308}},
+			&HaveMessage{BasicMessage: BasicMessage{Type: MessageTypeHave, Length: 5, Payload: []byte("\x00\x00\x18\xa4")}, PieceIndex: 6308},
+			NewHaveMessage(6308)},
 		{"BitField", "\x00\x00\x00\x05\x05\xff\xff\xff\x01",
-			&BitFieldMessage{BasicMessage: BasicMessage{Type: MessageTypeBitField, Length: 5, Payload: []byte("\xff\xff\xff\x01")}, BitField: bf}},
+			&BitFieldMessage{BasicMessage: BasicMessage{Type: MessageTypeBitField, Length: 5, Payload: []byte("\xff\xff\xff\x01")}, BitField: bf},
+			NewBitFieldMessage(bf)},
 		{"Request", "\x00\x00\x00\x0d\x06\x00\x00\x0b\xb0\x00\x02\x40\x00\x00\x00\x40\x00",
-			&RequestMessage{BasicMessage: BasicMessage{Type: MessageTypeRequest, Length: 13, Payload: []byte("\x00\x00\x0b\xb0\x00\x02\x40\x00\x00\x00\x40\x00")}, PieceIndex: 0x00000bb0, BeginOffset: 0x00024000, PieceLength: 0x00004000}},
+			&RequestMessage{BasicMessage: BasicMessage{Type: MessageTypeRequest, Length: 13, Payload: []byte("\x00\x00\x0b\xb0\x00\x02\x40\x00\x00\x00\x40\x00")}, PieceIndex: 0x00000bb0, BeginOffset: 0x00024000, PieceLength: 0x00004000},
+			NewRequestMessage(0x00000bb0, 0x00024000, 0x00004000)},
 		{"Piece", "\x00\x00\x00\x0d\x07\x00\x00\x05\x2d\x00\x02\x80\x00\x11\x11\x11\x11",
-			&PieceMessage{BasicMessage: BasicMessage{Type: MessageTypePiece, Length: 13, Payload: []byte("\x00\x00\x05\x2d\x00\x02\x80\x00\x11\x11\x11\x11")}, PieceIndex: 0x0000052d, BeginOffset: 0x00028000, Block: []byte("\x11\x11\x11\x11")}},
+			&PieceMessage{BasicMessage: BasicMessage{Type: MessageTypePiece, Length: 13, Payload: []byte("\x00\x00\x05\x2d\x00\x02\x80\x00\x11\x11\x11\x11")}, PieceIndex: 0x0000052d, BeginOffset: 0x00028000, Block: []byte("\x11\x11\x11\x11")},
+			NewPieceMessage(0x0000052d, 0x00028000, []byte("\x11\x11\x11\x11"))},
 		{"Cancel", "\x00\x00\x00\x0d\x08\x00\x00\x05\x2d\x00\x02\x80\x00\x00\x00\x40\x00",
-			&CancelMessage{BasicMessage: BasicMessage{Type: MessageTypeCancel, Length: 13, Payload: []byte("\x00\x00\x05\x2d\x00\x02\x80\x00\x00\x00\x40\x00")}, PieceIndex: 0x0000052d, BeginOffset: 0x00028000, PieceLength: 0x00004000}},
+			&CancelMessage{BasicMessage: BasicMessage{Type: MessageTypeCancel, Length: 13, Payload: []byte("\x00\x00\x05\x2d\x00\x02\x80\x00\x00\x00\x40\x00")}, PieceIndex: 0x0000052d, BeginOffset: 0x00028000, PieceLength: 0x00004000},
+			NewCancelMessage(0x0000052d, 0x00028000, 0x00004000)},
 		{"Port", "\x00\x00\x00\x03\x09\xb9\xaa",
-			&PortMessage{BasicMessage: BasicMessage{Type: MessageTypePort, Length: 3, Payload: []byte("\xb9\xaa")}, Port: 47530}},
+			&PortMessage{BasicMessage: BasicMessage{Type: MessageTypePort, Length: 3, Payload: []byte("\xb9\xaa")}, Port: 47530},
+			NewPortMessage(47530)},
 	}
 
 	Convey("Parsing messages from bytes", t, func() {
@@ -86,6 +98,7 @@ func TestMessages(t *testing.T) {
 			Convey(fmt.Sprintf("%s Message", sm.Desc), func() {
 				b := sm.Message.Bytes()
 				So(b, ShouldResemble, []byte(sm.String))
+				So(b, ShouldResemble, sm.ConstructedMessage.Bytes())
 			})
 		}
 	})

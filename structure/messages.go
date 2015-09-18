@@ -135,20 +135,45 @@ type KeepAliveMessage struct {
 	BasicMessage
 }
 
+func NewKeepAliveMessage() *KeepAliveMessage {
+	msg := &KeepAliveMessage{BasicMessage: BasicMessage{Type: MessageTypeKeepAlive, Length: 0}}
+	return msg
+}
+
 type ChokeMessage struct {
 	BasicMessage
+}
+
+func NewChokeMessage() *ChokeMessage {
+	msg := &ChokeMessage{BasicMessage: BasicMessage{Type: MessageTypeChoke, Length: 1}}
+	return msg
 }
 
 type UnchokeMessage struct {
 	BasicMessage
 }
 
+func NewUnchokeMessage() *UnchokeMessage {
+	msg := &UnchokeMessage{BasicMessage: BasicMessage{Type: MessageTypeUnchoke, Length: 1}}
+	return msg
+}
+
 type InterestedMessage struct {
 	BasicMessage
 }
 
+func NewInterestedMessage() *InterestedMessage {
+	msg := &InterestedMessage{BasicMessage: BasicMessage{Type: MessageTypeInterested, Length: 1}}
+	return msg
+}
+
 type NotInterestedMessage struct {
 	BasicMessage
+}
+
+func NewNotInterestedMessage() *NotInterestedMessage {
+	msg := &NotInterestedMessage{BasicMessage: BasicMessage{Type: MessageTypeNotInterested, Length: 1}}
+	return msg
 }
 
 type HaveMessage struct {
@@ -156,9 +181,23 @@ type HaveMessage struct {
 	PieceIndex int
 }
 
+func NewHaveMessage(pieceIndex int) *HaveMessage {
+	msg := &HaveMessage{BasicMessage: BasicMessage{Type: MessageTypeHave, Length: 5}, PieceIndex: pieceIndex}
+	bs := make([]byte, 4)
+	binary.BigEndian.PutUint32(bs, uint32(pieceIndex))
+	msg.Payload = bs
+	return msg
+}
+
 type BitFieldMessage struct {
 	BasicMessage
 	BitField *BitField
+}
+
+func NewBitFieldMessage(bf *BitField) *BitFieldMessage {
+	msg := &BitFieldMessage{BasicMessage: BasicMessage{Type: MessageTypeBitField, Length: 5}, BitField: bf}
+	msg.Payload = bf.Bytes()
+	return msg
 }
 
 type RequestMessage struct {
@@ -168,11 +207,38 @@ type RequestMessage struct {
 	PieceLength int
 }
 
+func NewRequestMessage(pieceIndex, beginOffset, pieceLength int) *RequestMessage {
+	msg := &RequestMessage{BasicMessage: BasicMessage{Type: MessageTypeRequest, Length: 13}, PieceIndex: pieceIndex, BeginOffset: beginOffset, PieceLength: pieceLength}
+	buf := bytes.NewBuffer(make([]byte, 0))
+	bs := make([]byte, 4)
+	binary.BigEndian.PutUint32(bs, uint32(pieceIndex))
+	buf.Write(bs)
+	binary.BigEndian.PutUint32(bs, uint32(beginOffset))
+	buf.Write(bs)
+	binary.BigEndian.PutUint32(bs, uint32(pieceLength))
+	buf.Write(bs)
+	msg.Payload = buf.Bytes()
+	return msg
+}
+
 type PieceMessage struct {
 	BasicMessage
 	PieceIndex  int
 	BeginOffset int
 	Block       []byte
+}
+
+func NewPieceMessage(pieceIndex int, beginOffset int, block []byte) *PieceMessage {
+	msg := &PieceMessage{BasicMessage: BasicMessage{Type: MessageTypePiece, Length: 13}, PieceIndex: pieceIndex, BeginOffset: beginOffset, Block: block}
+	buf := bytes.NewBuffer(make([]byte, 0))
+	bs := make([]byte, 4)
+	binary.BigEndian.PutUint32(bs, uint32(pieceIndex))
+	buf.Write(bs)
+	binary.BigEndian.PutUint32(bs, uint32(beginOffset))
+	buf.Write(bs)
+	buf.Write(block)
+	msg.Payload = buf.Bytes()
+	return msg
 }
 
 type CancelMessage struct {
@@ -182,9 +248,31 @@ type CancelMessage struct {
 	PieceLength int
 }
 
+func NewCancelMessage(pieceIndex, beginOffset, pieceLength int) *CancelMessage {
+	msg := &CancelMessage{BasicMessage: BasicMessage{Type: MessageTypeCancel, Length: 13}, PieceIndex: pieceIndex, BeginOffset: beginOffset, PieceLength: pieceLength}
+	buf := bytes.NewBuffer(make([]byte, 0))
+	bs := make([]byte, 4)
+	binary.BigEndian.PutUint32(bs, uint32(pieceIndex))
+	buf.Write(bs)
+	binary.BigEndian.PutUint32(bs, uint32(beginOffset))
+	buf.Write(bs)
+	binary.BigEndian.PutUint32(bs, uint32(pieceLength))
+	buf.Write(bs)
+	msg.Payload = buf.Bytes()
+	return msg
+}
+
 type PortMessage struct {
 	BasicMessage
 	Port int
+}
+
+func NewPortMessage(port int) *PortMessage {
+	msg := &PortMessage{BasicMessage: BasicMessage{Type: MessageTypePort, Length: 3}, Port: port}
+	bs := make([]byte, 2)
+	binary.BigEndian.PutUint16(bs, uint16(port))
+	msg.Payload = bs
+	return msg
 }
 
 /*
