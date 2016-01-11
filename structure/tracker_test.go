@@ -16,6 +16,21 @@ func TestTrackerRequest(t *testing.T) {
 		So(request.PeerID, ShouldEqual, "-TR2840-nj5ovtkoz2ed8")
 	})
 
+	Convey("Parsing many torrent files", t, func() {
+		filenames := []string{
+			"../testfiles/2014-01-07-wheezy-raspbian.zip.torrent",
+			"../testfiles/NA-751-2015-08-27-Final.mp3.torrent",
+		}
+
+		for _, filename := range filenames {
+			Convey("Parsing "+filename, func() {
+				metainfo := NewMetainfo(filename)
+				request := NewTrackerRequest(metainfo)
+				So(request, ShouldNotBeNil)
+			})
+		}
+	})
+
 	Convey("Getting a GET /announce URL", t, func() {
 		filename := "../testfiles/kali-linux-2.0-i386.iso.torrent"
 		metainfo := NewMetainfo(filename)

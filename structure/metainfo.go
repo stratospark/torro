@@ -92,7 +92,12 @@ func addIntField(name string, s *int, val interface{}, required bool) error {
 
 func addBoolField(name string, s *bool, val interface{}, required bool) error {
 	if val != nil {
-		*s = val.(bool)
+		x := val.(int)
+		if x == 0 {
+			*s = false
+		} else {
+			*s = true
+		}
 	} else {
 		if required {
 			return errors.New(fmt.Sprint("Missing Required Field: ", name))

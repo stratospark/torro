@@ -27,16 +27,10 @@ func main() {
 
 	println("TORRO!\n\n\n")
 
-	d, _ := upnp.Discover()
-	ip, _ := d.ExternalIP()
-	_ = d.Forward(55555, "torro")
-	defer d.Clear(55555)
-	log.Printf("Discovered: %q\n", d)
-	log.Printf("External IP: %q\n", ip)
-	log.Printf("Location: %q\n", d.Location())
-
 	// Read command line flags and arguments
 	pPrint := flag.String("print", "metainfo", "either tokens, parsed, or metainfo")
+	pUPNP := flag.Bool("upnp", false, "open port through UPNP")
+	pAnnounce := flag.Bool("announce", false, "send announce request to tracker")
 	flag.Parse()
 
 	var filename string
@@ -45,6 +39,17 @@ func main() {
 		filename = flag.Args()[0]
 	} else {
 		filename = "testfiles/TheInternetsOwnBoyTheStoryOfAaronSwartz_archive.torrent"
+	}
+
+	if *pUPNP {
+		fmt.Println("Opening port through UPNP")
+		d, _ := upnp.Discover()
+		ip, _ := d.ExternalIP()
+		_ = d.Forward(55555, "torro")
+		defer d.Clear(55555)
+		log.Printf("Discovered: %q\n", d)
+		log.Printf("External IP: %q\n", ip)
+		log.Printf("Location: %q\n", d.Location())
 	}
 
 	// Read actual .torrent file
@@ -71,18 +76,21 @@ func main() {
 	req.Port = 55555
 	req.Compact = true
 	req.NoPeerID = true
-	res, err := c.MakeAnnounceRequest(req, client.TrackerRequestStarted)
-	if err != nil {
-		fmt.Println(res.FailureReason)
-		panic(err.Error())
-	}
-	fmt.Println(res)
 
-	log.Println("StartListening")
-	port := 55555
-	peerId := []byte("-TR2840-nj5ovtkoz2ed8")
-	s := client.NewBTService(port, peerId)
-	s.StartListening()
+	if *pAnnounce {
+		res, err := c.MakeAnnounceRequest(req, client.TrackerRequestStarted)
+		if err != nil {
+			fmt.Println(res.FailureReason)
+			panic(err.Error())
+		}
+		fmt.Println(res)
+
+		log.Println("StartListening")
+		port := 55555
+		peerId := []byte("-TR2840-nj5ovtkoz2ed8")
+		s := client.NewBTService(port, peerId)
+		s.StartListening()
+	}
 
 	switch *pPrint {
 	case "tokens":
@@ -95,7 +103,7 @@ func main() {
 		PrintMetainfo(metainfo)
 	}
 
-	time.Sleep(time.Second * 60)
+	//	time.Sleep(time.Second * 10)
 
 }
 
@@ -116,9 +124,11 @@ func PrintParsedStructure(result map[string]interface{}) {
 	pretty.Println("Announce: ", conv(result["announce"]))
 	pretty.Println("Announce-List", conv(result["annnounce-list"]))
 
-	creationDate := int64(result["creation date"].(int))
-	t := time.Unix(creationDate, 0)
-	pretty.Println("Creation Date:", t.String())
+	if result["creation date"] != nil {
+		creationDate := int64(result["creation date"].(int))
+		t := time.Unix(creationDate, 0)
+		pretty.Println("Creation Date:", t.String())
+	}
 
 	pretty.Println("Comment:", conv(result["comment"]))
 	pretty.Println("Created by:", conv(result["created by"]))
@@ -137,30 +147,30 @@ func PrintParsedStructure(result map[string]interface{}) {
 	pretty.Println("Info/md5sum:", info["md5sum"])
 	//	pretty.Println("Info/files:", info["files"])
 
-	//	if info["files"] != nil {
-	//		files := info["files"].([]interface{})
-	//		for i, val := range files {
-	//			//		pretty.Println(i, ": ", val)
-	//			pretty.Println("\n\n", i)
-	//			file := val.(map[string]interface{})
-	//			for key, val2 := range file {
-	//				switch val2.(type) {
-	//				case int:
-	//					pretty.Println(key, ": ", val2)
-	//				case []uint8:
-	//					pretty.Println(key, ": ", conv(val2))
-	//				case []interface{}:
-	//					path := val2.([]interface{})
-	//					pretty.Println("Paths:")
-	//					for _, val3 := range path {
-	//						pretty.Println("\t\t", conv(val3))
-	//					}
-	//				default:
-	//					pretty.Println(key, ": ", val2)
-	//				}
-	//			}
-	//		}
-	//	}
+	if info["files"] != nil {
+		files := info["files"].([]interface{})
+		for i, val := range files {
+			//		pretty.Println(i, ": ", val)
+			pretty.Println("\n\n", i)
+			file := val.(map[string]interface{})
+			for key, val2 := range file {
+				switch val2.(type) {
+				case int:
+					pretty.Println(key, ": ", val2)
+				case []uint8:
+					pretty.Println(key, ": ", conv(val2))
+				case []interface{}:
+					path := val2.([]interface{})
+					pretty.Println("Paths:")
+					for _, val3 := range path {
+						pretty.Println("\t\t", conv(val3))
+					}
+				default:
+					pretty.Println(key, ": ", val2)
+				}
+			}
+		}
+	}
 }
 
 func PrintMetainfo(metainfo *structure.Metainfo) {
