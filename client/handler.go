@@ -33,7 +33,7 @@ type BTConn struct {
 	PeerID         string
 	HandshakeChan  chan bool
 	MessageChan    chan bool
-	WriteChan      chan *structure.BasicMessage
+	WriteChan      chan structure.Message
 	DisconnectChan chan bool
 }
 
@@ -86,6 +86,19 @@ const (
 	BTStateReadyForMessages
 )
 
+func (s BTState) String() string {
+	switch s {
+	case BTStateStartListening:
+		return "BTStateStartListening"
+	case BTStateWaitingForHandshake:
+		return "BTStateWaitingForHandshake"
+	case BTStateReadyForMessages:
+		return "BTStateReadyForMessages"
+	default:
+		return "BTState not found!"
+	}
+}
+
 /*
 BTService is a wrapper around a TCPListener, along with
 other state information.
@@ -129,7 +142,7 @@ func NewBTService(port int, peerId []byte) *BTService {
 StartListening starts a TCP listening service on a goroutine.
 */
 func (s *BTService) StartListening() (err error) {
-	log.Println("Start listening")
+	log.Println("[BTService] Start listening")
 	addr, _ := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%d", s.Port))
 	l, err := net.ListenTCP("tcp", addr)
 	if err != nil {
@@ -179,6 +192,7 @@ func (s *BTService) AddHash(h []byte) {
 func (s *BTService) InitiateHandshakes(hash []byte, peers []structure.Peer) {
 	for _, peer := range peers {
 		addr := fmt.Sprintf("%q:%d", peer.IP, peer.Port)
+		log.Printf("[InitiateHandshakes] Address: %q", addr)
 		btc, err := s.ConnectionFetcher.Dial(addr)
 		if err != nil {
 			// TODO: Try more than once before giving up?
@@ -217,7 +231,7 @@ func (btc *BTConn) handleConnection(s *BTService) {
 	btc.HandshakeChan = make(chan bool, 1)
 	btc.MessageChan = make(chan bool, 1)
 	btc.DisconnectChan = make(chan bool, 1)
-	btc.WriteChan = make(chan *structure.BasicMessage, 1)
+	btc.WriteChan = make(chan structure.Message, 1)
 	btc.PeerID = string(s.PeerID)
 
 	go btc.readLoop(s.AddChan, s.LeaveChan)
@@ -233,19 +247,20 @@ func (btc *BTConn) readLoop(addChan, leaveChan chan<- *BTConn) {
 			log.Printf("[readLoop] Waiting for Handshake\n")
 			peerHs, err := handleHandshake(btc)
 			if err != nil {
-				log.Printf("[readLoop] error: %q", err.Error())
+				log.Printf("[readLoop] Error: %q", err.Error())
 				btc.Close()
 				leaveChan <- btc
 				continue
 			}
 
-			log.Println(btc.State)
+			log.Printf("[readLoop] State: %q", btc.State)
+
 			switch btc.State {
 			case BTStateWaitingForHandshake:
-				log.Printf("%q === %q?", btc.Hash, string(peerHs.Hash))
+				log.Printf("[readLoop] HashMatch? %q === %q?", btc.Hash, string(peerHs.Hash))
 				if btc.Hash != string(peerHs.Hash) {
 					// TODO: What if same connection is handling multiple hashes?
-					log.Printf("[readLoop] hash mismatch\n")
+					log.Printf("[readLoop] Hash mismatch\n")
 					btc.Close()
 					leaveChan <- btc
 					continue
@@ -272,42 +287,44 @@ func (btc *BTConn) readLoop(addChan, leaveChan chan<- *BTConn) {
 			btc.State = BTStateReadyForMessages
 			btc.MessageChan <- true
 		case _ = <-btc.MessageChan:
-			log.Printf("[readLoop] Reading Message from: %q", btc)
+			log.Printf("[readLoop] Reading from MessageChan: %q", btc)
 			m, err := structure.ReadMessage(btc)
 			if err != nil {
-				log.Printf("[readLoop] error reading message: %s", err)
+				log.Printf("[readLoop] Error reading message: %s", err)
 				btc.Close()
 				leaveChan <- btc
 				continue
 			}
+			log.Printf("[readLoop] Did Read from MessageChan: %q", m)
 
 			switch m.(type) {
+			case *structure.UnchokeMessage:
+				log.Println("[readLoop] Received: Unchoke MESSAGE")
+				btc.WriteChan <- structure.NewRequestMessage(0x00000bb0, 0x00024000, 0x00004000)
 			case *structure.BitFieldMessage:
-				log.Println("BIT FIELD MESSAGE")
-				btc.WriteChan <- &structure.BasicMessage{Type: structure.MessageTypeInterested, Length: 1}
+				log.Println("[readLoop] Received: Bit Field MESSAGE")
+				btc.WriteChan <- structure.NewInterestedMessage()
 			default:
-				log.Println(" OTHER MESSAGE")
+				log.Println("[readLoop] Received: OTHER MESSAGE")
 			}
-			log.Println("[readLoop] got Mesage: ", m)
-			time.Sleep(time.Millisecond * 100) // TODO: get rid of this sleep
-			btc.Close()
-			leaveChan <- btc
+			log.Println("[readLoop] Received Message: ", m)
+			btc.MessageChan <- true
 		}
 	}
 }
 
 func (btc *BTConn) writeLoop(addChan, leaveChan chan<- *BTConn) {
 	for msg := range btc.WriteChan {
+		log.Println("[writeLoop] Writing to remote: %q", msg)
 		//		switch msg.Type {
 		//
 		//		}
 		btc.Write(msg.Bytes())
 	}
-	return
 }
 
 func handleHandshake(c *BTConn) (hs *structure.Handshake, err error) {
-	// First connection, assume handshake messsage
+	// First connection, assume handshake message
 	// Get the protocol name length
 	hs, err = structure.ReadHandshake(c)
 	if err != nil {
@@ -315,7 +332,6 @@ func handleHandshake(c *BTConn) (hs *structure.Handshake, err error) {
 		return nil, err
 	}
 
-	//	log.Printf("[HandleConnection] Handshake: %q", buf)
 	log.Printf("[handleHandshake] %q", hs)
 
 	return hs, nil
@@ -326,9 +342,9 @@ StopListening stops the TCP listener by sending to its Close channel.
 */
 func (s *BTService) StopListening() (err error) {
 	// TODO: Check that listener is actually on
-	log.Println("StopListening")
+	log.Println("[StopListening] Send Requests")
 	s.CloseCh <- true
 	_ = <-s.TermCh
-	log.Println("StoppedListening")
+	log.Println("[StopListening] Returning")
 	return nil
 }

@@ -116,6 +116,37 @@ const (
 	MessageTypePort          MessageType = 9
 )
 
+func (m MessageType) String() string {
+	switch m {
+	case MessageTypeHandshake:
+		return "MessageTypeHandshake"
+	case MessageTypeKeepAlive:
+		return "MessageTypeKeepAlive"
+	case MessageTypeChoke:
+		return "MessageTypeChoke"
+	case MessageTypeUnchoke:
+		return "MessageTypeUnchoke"
+	case MessageTypeInterested:
+		return "MessageTypeInterested"
+	case MessageTypeNotInterested:
+		return "MessageTypeNotInterested"
+	case MessageTypeHave:
+		return "MessageTypeHave"
+	case MessageTypeBitField:
+		return "MessageTypeBitField"
+	case MessageTypeRequest:
+		return "MessageTypeRequest"
+	case MessageTypePiece:
+		return "MessageTypePiece"
+	case MessageTypeCancel:
+		return "MessageTypeCancel"
+	case MessageTypePort:
+		return "MessageTypePort"
+	default:
+		return "Unknown Message Type"
+	}
+}
+
 type Message interface {
 	Bytes() []byte
 	GetType() MessageType
@@ -304,7 +335,7 @@ and decodes the next available message..
 */
 func ReadMessage(r Reader) (m Message, err error) {
 	buf := make([]byte, 4)
-	log.Println("Waiting to read full")
+	log.Println("[ReadMessage] Waiting to read full")
 	_, err = io.ReadFull(r, buf)
 	if err != nil {
 		log.Println("[ReadMessage] Error: ", err)
@@ -323,6 +354,8 @@ func ReadMessage(r Reader) (m Message, err error) {
 		return nil, err
 	}
 	mType := MessageType(buf[0])
+
+	log.Printf("[ReadMessage] mType: %q", mType)
 
 	if mLen >= 1 {
 		mPayload := buf[1:mLen]
