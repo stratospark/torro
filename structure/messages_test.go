@@ -97,6 +97,10 @@ func TestMessages(t *testing.T) {
 		for _, sm := range smTests {
 			Convey(fmt.Sprintf("%s Message", sm.Desc), func() {
 				b := sm.Message.Bytes()
+				t.Logf("Message: %q", sm.Message)
+				t.Logf("Message Bytes: %q", b)
+				t.Logf("Constructed Message: %q", sm.ConstructedMessage)
+				t.Logf("Constructed Message Bytes: %q", sm.ConstructedMessage.Bytes())
 				So(b, ShouldResemble, []byte(sm.String))
 				So(b, ShouldResemble, sm.ConstructedMessage.Bytes())
 			})

@@ -298,12 +298,22 @@ func (btc *BTConn) readLoop(addChan, leaveChan chan<- *BTConn) {
 			log.Printf("[readLoop] Did Read from MessageChan: %q", m)
 
 			switch m.(type) {
+			case *structure.KeepAliveMessage:
+				log.Println("[readLoop] Received: KeepAlive MESSAGE")
+				// TODO: reset disconnect timer
+				break
+			case *structure.ChokeMessage:
+				break
 			case *structure.UnchokeMessage:
 				log.Println("[readLoop] Received: Unchoke MESSAGE")
 				btc.WriteChan <- structure.NewRequestMessage(0x00000bb0, 0x00024000, 0x00004000)
 			case *structure.BitFieldMessage:
 				log.Println("[readLoop] Received: Bit Field MESSAGE")
 				btc.WriteChan <- structure.NewInterestedMessage()
+				//			case *structure.HaveMessage:
+				//				log.Println("[readLoop] Received: Have MESSAGE")
+				//			case *structure.PieceMessage:
+				//				log.Println("[readLoop] Received: Piece MESSAGE")
 			default:
 				log.Println("[readLoop] Received: OTHER MESSAGE")
 			}

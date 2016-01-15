@@ -87,7 +87,7 @@ func main() {
 
 		log.Println("StartListening")
 		port := 55555
-		peerId := []byte("-TR2840-nj5ovtkoz2ed8")
+		peerId := []byte("-TR2840-nj5ovtkoz2ed")
 		s := client.NewBTService(port, peerId)
 		s.StartListening()
 	}
@@ -103,7 +103,7 @@ func main() {
 		PrintMetainfo(metainfo)
 	}
 
-	//	time.Sleep(time.Second * 10)
+	time.Sleep(time.Second * 60)
 
 }
 

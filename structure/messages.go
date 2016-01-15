@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 )
 
@@ -226,6 +227,7 @@ type BitFieldMessage struct {
 }
 
 func NewBitFieldMessage(bf *BitField) *BitFieldMessage {
+	// TODO: Add length of bitfield
 	msg := &BitFieldMessage{BasicMessage: BasicMessage{Type: MessageTypeBitField, Length: 5}, BitField: bf}
 	msg.Payload = bf.Bytes()
 	return msg
@@ -260,6 +262,7 @@ type PieceMessage struct {
 }
 
 func NewPieceMessage(pieceIndex int, beginOffset int, block []byte) *PieceMessage {
+	// TODO: add length of piece
 	msg := &PieceMessage{BasicMessage: BasicMessage{Type: MessageTypePiece, Length: 13}, PieceIndex: pieceIndex, BeginOffset: beginOffset, Block: block}
 	buf := bytes.NewBuffer(make([]byte, 0))
 	bs := make([]byte, 4)
@@ -314,9 +317,11 @@ func (m BasicMessage) Bytes() []byte {
 	bs := make([]byte, 0)
 	buf := bytes.NewBuffer(bs)
 
-	lenBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(lenBytes, uint32(m.Length))
-	buf.Write(lenBytes)
+	//	lenBytes := make([]byte, 4)
+	//	binary.BigEndian.PutUint32(lenBytes, uint32(m.Length))
+	//	buf.Write(lenBytes)
+	//  buf.Write([]byte{uint32(m.Length)})
+	_ = binary.Write(buf, binary.BigEndian, uint32(m.Length))
 
 	if m.Type != MessageTypeKeepAlive {
 		buf.Write([]byte{byte(m.Type)})
@@ -334,29 +339,26 @@ ReadMessage reads from a Reader, most likely net.Conn during real operation,
 and decodes the next available message..
 */
 func ReadMessage(r Reader) (m Message, err error) {
-	buf := make([]byte, 4)
-	log.Println("[ReadMessage] Waiting to read full")
-	_, err = io.ReadFull(r, buf)
+	lr := io.LimitReader(r, 4)
+	buf, err := ioutil.ReadAll(lr)
 	if err != nil {
 		log.Println("[ReadMessage] Error: ", err)
 		return nil, err
 	}
-	mLen := int(binary.BigEndian.Uint32(buf))
 
+	log.Printf("[ReadMessage] Buf: %q", buf)
+	mLen := int(binary.BigEndian.Uint32(buf[0:4]))
+	log.Printf("[ReadMessage] Length: %q", mLen)
 	if mLen == 0 {
 		return &KeepAliveMessage{BasicMessage: BasicMessage{Length: 0, Type: MessageTypeKeepAlive}}, nil
 	}
 
-	buf = make([]byte, mLen)
-	_, err = io.ReadFull(r, buf)
-	if err != nil {
-		log.Println("[ReadMessage] Error: ", err)
-		return nil, err
-	}
+	lr = io.LimitReader(r, int64(mLen))
+	buf, err = ioutil.ReadAll(lr)
 	mType := MessageType(buf[0])
-
 	log.Printf("[ReadMessage] mType: %q", mType)
 
+	// TODO: Use specific Message constructors
 	if mLen >= 1 {
 		mPayload := buf[1:mLen]
 		bm := BasicMessage{Length: mLen, Type: mType, Payload: mPayload}

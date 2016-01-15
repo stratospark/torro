@@ -28,6 +28,7 @@ func NewTrackerClient() *TrackerClient {
 }
 
 func (tc *TrackerClient) MakeAnnounceRequest(req *structure.TrackerRequest, event TrackerRequestEvent) (tr *structure.TrackerResponse, err error) {
+	// TODO: Validate that tracker request has valid fields, e.g. peer_id = 20 bytes
 	req.Event = string(event)
 	url := req.GetURL()
 	resp, err := tc.HTTP.Get(url)

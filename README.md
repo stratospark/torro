@@ -7,6 +7,10 @@ a BitTorrent client for the purposes of learning Go.
 
 * Some files are not being parsed correctly. We need to test parser on a larger set of .torrent files.
 
+#### Tracker Protocol
+
+* Support UDP trackers
+
 #### P2P
 
 * Handshake message needs to be sent.

@@ -46,7 +46,7 @@ func (c *MockConnection) Read(b []byte) (n int, err error) {
 		h := c.ReadQueue.Dequeue()
 		read, _ := h.([]byte)
 		log.Printf("[TEST---MockConnection] Did Read From: %q, len(read): %d, len(b): %d\n", read, len(read), len(b))
-		for i := 0; i < len(b); i++ {
+		for i := 0; i < len(b) && i < len(read); i++ {
 			b[i] = read[i]
 		}
 		log.Printf("[TEST---MockConnection] After Read: %q", b)
