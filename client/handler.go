@@ -24,12 +24,14 @@ connection to a Peer according to the BitTorrent protocol.
 */
 type BTConn struct {
 	Conn           Connection
+	Addr           string
 	State          BTState
 	AmChoking      bool
 	AmInterested   bool
 	PeerChoking    bool
 	PeerInterested bool
 	Hash           string
+	BitField       *structure.BitField
 	PeerID         string
 	HandshakeChan  chan bool
 	MessageChan    chan bool
@@ -67,7 +69,7 @@ func (t *TCPConnectionFetcher) Dial(addr string) (*BTConn, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &BTConn{Conn: conn}, nil
+	return &BTConn{Conn: conn, Addr: addr}, nil
 }
 
 /*
@@ -284,6 +286,7 @@ func (btc *BTConn) readLoop(addChan, leaveChan chan<- *BTConn) {
 			}
 
 			addChan <- btc
+			log.Printf("AAAAAAAAAAAAAAAAAAAAAAAA: %q", btc.Addr)
 			btc.State = BTStateReadyForMessages
 			btc.MessageChan <- true
 		case _ = <-btc.MessageChan:
@@ -309,11 +312,12 @@ func (btc *BTConn) readLoop(addChan, leaveChan chan<- *BTConn) {
 				btc.WriteChan <- structure.NewRequestMessage(0x00000bb0, 0x00024000, 0x00004000)
 			case *structure.BitFieldMessage:
 				log.Println("[readLoop] Received: Bit Field MESSAGE")
+				btc.BitField = m.(*structure.BitFieldMessage).BitField
 				btc.WriteChan <- structure.NewInterestedMessage()
-				//			case *structure.HaveMessage:
-				//				log.Println("[readLoop] Received: Have MESSAGE")
-				//			case *structure.PieceMessage:
-				//				log.Println("[readLoop] Received: Piece MESSAGE")
+			//			case *structure.HaveMessage:
+			//				log.Println("[readLoop] Received: Have MESSAGE")
+			//			case *structure.PieceMessage:
+			//				log.Println("[readLoop] Received: Piece MESSAGE")
 			default:
 				log.Println("[readLoop] Received: OTHER MESSAGE")
 			}
@@ -356,5 +360,16 @@ func (s *BTService) StopListening() (err error) {
 	s.CloseCh <- true
 	_ = <-s.TermCh
 	log.Println("[StopListening] Returning")
+	return nil
+}
+
+func (s *BTService) LookupConn(addr string) *BTConn {
+	log.Printf("[LookupConn]: searching for %q", addr)
+	for k := range s.Peers {
+		if k.Addr == addr {
+			log.Printf("[LookupConn]: Found %q", addr)
+			return k
+		}
+	}
 	return nil
 }

@@ -109,7 +109,7 @@ func (t *MockConnectionFetcher) Dial(addr string) (*BTConn, error) {
 		RestOfMessageChan: make(chan bool, 1),
 		ReceiveBytesChan:  make(chan []byte, 1),
 	}
-	btc := &BTConn{Conn: conn}
+	btc := &BTConn{Conn: conn, Addr: addr}
 	t.Conns[addr] = btc
 
 	return btc, nil
@@ -268,6 +268,12 @@ func TestConversation(t *testing.T) {
 				m, err := ReadMessageOrTimeout(c0, ctx)
 				ctx.So(err, ShouldBeNil)
 				ctx.So(m.GetType(), ShouldEqual, structure.MessageTypeInterested)
+
+				// TODO: Check why byte equality doesn't work
+				btc := s.LookupConn(pp.AddrString())
+				t.Logf("BTC: %q\n", btc.BitField.String())
+				t.Logf("BF : %q\n", bf.String())
+				ctx.So(bf.String(), ShouldEqual, btc.BitField.String())
 
 				msg1 := structure.NewUnchokeMessage()
 				c0.SendMessage(msg1)
