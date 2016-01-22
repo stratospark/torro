@@ -109,7 +109,7 @@ func (t *MockConnectionFetcher) Dial(addr string) (*BTConn, error) {
 		RestOfMessageChan: make(chan bool, 1),
 		ReceiveBytesChan:  make(chan []byte, 1),
 	}
-	btc := &BTConn{Conn: conn, Addr: addr}
+	btc := NewBTConn(conn, addr)
 	t.Conns[addr] = btc
 
 	return btc, nil
@@ -278,10 +278,12 @@ func TestConversation(t *testing.T) {
 				t.Logf("BF : %q\n", bf.String())
 				ctx.So(bf.String(), ShouldEqual, btc.BitField.String())
 
+				ctx.So(btc.PeerChoking, ShouldBeTrue)
 				msg1 := structure.NewUnchokeMessage()
 				c0.SendMessage(msg1)
 
 				m, err = ReadMessageOrTimeout(c0, ctx)
+				ctx.So(btc.PeerChoking, ShouldBeFalse)
 				ctx.So(err, ShouldBeNil)
 				ctx.So(m.GetType(), ShouldEqual, structure.MessageTypeRequest)
 

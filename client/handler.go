@@ -39,6 +39,12 @@ type BTConn struct {
 	DisconnectChan chan bool
 }
 
+func NewBTConn(conn Connection, addr string) *BTConn {
+	return &BTConn{Conn: conn, Addr: addr,
+		AmChoking: true, AmInterested: false,
+		PeerChoking: true, PeerInterested: false}
+}
+
 func (btc *BTConn) Read(b []byte) (n int, err error) {
 	return btc.Conn.Read(b)
 }
@@ -69,7 +75,7 @@ func (t *TCPConnectionFetcher) Dial(addr string) (*BTConn, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &BTConn{Conn: conn, Addr: addr}, nil
+	return NewBTConn(conn, addr), nil
 }
 
 /*
@@ -169,7 +175,7 @@ func (s *BTService) StartListening() (err error) {
 
 			l.SetDeadline(time.Now().Add(time.Millisecond))
 			conn, err := l.AcceptTCP()
-			btc := &BTConn{Conn: conn}
+			btc := NewBTConn(conn, "")
 			if err != nil {
 				if !strings.Contains(err.Error(), "i/o timeout") {
 					log.Println(err)
@@ -309,6 +315,7 @@ func (btc *BTConn) readLoop(addChan, leaveChan chan<- *BTConn) {
 				break
 			case *structure.UnchokeMessage:
 				log.Println("[readLoop] Received: Unchoke MESSAGE")
+				btc.PeerChoking = false
 				btc.WriteChan <- structure.NewRequestMessage(0x00000bb0, 0x00024000, 0x00004000)
 			case *structure.BitFieldMessage:
 				log.Println("[readLoop] Received: Bit Field MESSAGE")
