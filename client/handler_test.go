@@ -159,11 +159,13 @@ func TestAcceptHandshake(t *testing.T) {
 		handshake := "\x13\x42\x69\x74\x54\x6f\x72\x72\x65\x6e\x74\x20\x70\x72\x6f\x74\x6f\x63\x6f\x6c\x00\x00\x00\x00\x00\x10\x00\x05\x6f\xda\xb6\xc1\x9f\x72\x14\x76\xfa\xca\xab\x36\x60\x8a\x87\x7a\x2a\xac\xbf\xc9\x2d\x55\x54\x33\x34\x34\x30\x2d\xcf\x9f\x51\x2b\xce\x01\x31\xf9\x38\x6f\xb6\x98"
 		_, _ = conn.Write([]byte(handshake))
 		respHandshake, err := structure.ReadHandshake(conn)
+		time.Sleep(time.Millisecond)
 		So(err, ShouldBeNil)
 		So(respHandshake, ShouldNotBeNil)
 		So(len(s.Peers), ShouldEqual, 1)
 
 		_ = s.StopListening()
+		time.Sleep(time.Millisecond)
 		So(s.Listening, ShouldBeFalse)
 	})
 }
@@ -188,6 +190,7 @@ func TestRejectHandshake(t *testing.T) {
 		So(err, ShouldNotBeNil)
 
 		_ = s.StopListening()
+		time.Sleep(time.Millisecond)
 		So(s.Listening, ShouldBeFalse)
 	})
 }
@@ -288,5 +291,63 @@ func TestConversation(t *testing.T) {
 		wg.Wait()
 
 		_ = s.StopListening()
+	})
+}
+
+func TestHave(t *testing.T) {
+	Convey("Receives Have Messages and update BitField", t, func(ctx C) {
+		s := NewBTService(port, []byte(peerIDRemote))
+		mc := NewMockConnectionFetcher()
+		s.ConnectionFetcher = mc
+		s.AddHash(hash)
+		_ = s.StartListening()
+
+		// TODO: check that peer data is saved within service data structure
+		peers := make([]structure.Peer, 1)
+		peers[0] = structure.Peer{IP: net.IPv4(192, 168, 1, 1), Port: 55557}
+		//		peers[1] = structure.Peer{IP: net.IPv4(192, 168, 1, 2), Port: 55557}
+		s.InitiateHandshakes(hash, peers)
+
+		wg := sync.WaitGroup{}
+		wg.Add(len(peers))
+		for _, p := range peers {
+			go func(pp structure.Peer) {
+				c0 := mc.Conns[pp.AddrString()].Conn.(*MockConnection)
+				hs, err := structure.ReadHandshake(bytes.NewReader(<-c0.ReceiveBytesChan))
+				ctx.So(hs, ShouldNotBeNil)
+				ctx.So(err, ShouldBeNil)
+
+				hs, _ = structure.NewHandshake(hash, []byte(peerIDClient))
+				c0.SendMessage(hs)
+
+				bf := structure.BitFieldFromHexString("\x00\x00\x00\x01")
+				msg0 := structure.NewBitFieldMessage(bf)
+				c0.SendMessage(msg0)
+
+				m, err := ReadMessageOrTimeout(c0, ctx)
+				ctx.So(err, ShouldBeNil)
+				ctx.So(m.GetType(), ShouldEqual, structure.MessageTypeInterested)
+
+				haveMsg := structure.NewHaveMessage(0)
+				c0.SendMessage(haveMsg)
+
+				time.Sleep(time.Millisecond)
+
+				// TODO: Check why byte equality doesn't work
+				btc := s.LookupConn(pp.AddrString())
+				ctx.Printf("BTC: %q\n", btc.BitField.String())
+				ctx.Printf("BF : %q\n", bf.String())
+				updatedBF := structure.BitFieldFromHexString("\x80\x00\x00\x01")
+				ctx.Printf("UBF: %q\n", updatedBF.String())
+				isEqual := updatedBF.String() == btc.BitField.String()
+				ctx.So(isEqual, ShouldBeTrue)
+
+				wg.Done()
+			}(p)
+		}
+		wg.Wait()
+
+		_ = s.StopListening()
+		time.Sleep(time.Millisecond)
 	})
 }

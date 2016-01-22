@@ -314,8 +314,14 @@ func (btc *BTConn) readLoop(addChan, leaveChan chan<- *BTConn) {
 				log.Println("[readLoop] Received: Bit Field MESSAGE")
 				btc.BitField = m.(*structure.BitFieldMessage).BitField
 				btc.WriteChan <- structure.NewInterestedMessage()
-			//			case *structure.HaveMessage:
-			//				log.Println("[readLoop] Received: Have MESSAGE")
+			case *structure.HaveMessage:
+				log.Println("[readLoop] Received: Have MESSAGE")
+				pi := m.(*structure.HaveMessage).PieceIndex
+				log.Printf("[readLoop] Have Message Index: %q", pi)
+				log.Printf("BIT 0: %q", btc.BitField.Get(0))
+				btc.BitField.Set(uint32(pi), 1)
+				log.Printf("BIT 0: %q", btc.BitField.Get(0))
+
 			//			case *structure.PieceMessage:
 			//				log.Println("[readLoop] Received: Piece MESSAGE")
 			default:
