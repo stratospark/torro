@@ -227,8 +227,7 @@ type BitFieldMessage struct {
 }
 
 func NewBitFieldMessage(bf *BitField) *BitFieldMessage {
-	// TODO: Add length of bitfield
-	msg := &BitFieldMessage{BasicMessage: BasicMessage{Type: MessageTypeBitField, Length: 5}, BitField: bf}
+	msg := &BitFieldMessage{BasicMessage: BasicMessage{Type: MessageTypeBitField, Length: len(bf.Bytes()) + 1}, BitField: bf}
 	msg.Payload = bf.Bytes()
 	return msg
 }

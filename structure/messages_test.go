@@ -107,3 +107,11 @@ func TestMessages(t *testing.T) {
 		}
 	})
 }
+
+func TestBitfieldMessage(t *testing.T) {
+	Convey("Message should have proper length", t, func() {
+		bf := BitFieldFromHexString("\xff\xff")
+		msg := NewBitFieldMessage(bf)
+		So(msg.Length, ShouldEqual, len(bf.Bytes())+1)
+	})
+}
