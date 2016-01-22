@@ -261,7 +261,6 @@ type PieceMessage struct {
 }
 
 func NewPieceMessage(pieceIndex int, beginOffset int, block []byte) *PieceMessage {
-	// TODO: add length of piece
 	msg := &PieceMessage{BasicMessage: BasicMessage{Type: MessageTypePiece, Length: 13}, PieceIndex: pieceIndex, BeginOffset: beginOffset, Block: block}
 	buf := bytes.NewBuffer(make([]byte, 0))
 	bs := make([]byte, 4)

@@ -141,7 +141,7 @@ func NewMetainfo(filename string) *Metainfo {
 
 	// Optional fields
 	if result["announce-list"] != nil {
-		// TODO
+		// TODO: parse announce-list
 	}
 
 	if result["creation date"] != nil {
